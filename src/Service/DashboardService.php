@@ -2,15 +2,11 @@
 
 namespace ChurchCRM\Service;
 
-use ChurchCRM\Base\ListOption;
 use ChurchCRM\FamilyQuery;
 use ChurchCRM\ListOptionQuery;
 use ChurchCRM\Map\ListOptionTableMap;
 use ChurchCRM\Map\PersonTableMap;
-use ChurchCRM\Person;
 use ChurchCRM\PersonQuery;
-use Propel\Runtime\ActiveQuery\Criteria;
-use Propel\Runtime\Propel;
 
 class DashboardService
 {
