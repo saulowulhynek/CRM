@@ -2,28 +2,22 @@
 
 namespace ChurchCRM\Service;
 
+use ChurchCRM\FamilyQuery;
+use ChurchCRM\PersonQuery;
+
 class DashboardService
 {
 
   function getFamilyCount()
   {
-    $sSQL = "select
-        (select count(*) from family_fam ) as familyCount
-        from dual ;";
-    $rsQuickStat = RunQuery($sSQL);
-    $row = mysql_fetch_array($rsQuickStat);
-    $data = ['familyCount' => $row['familyCount']];
-    return $data;
+    $person  = FamilyQuery::create()->withColumn('count(*)', "count")->findOne();
+    return $data = ['familyCount' => $person->getCount()];
   }
 
   function getPersonCount()
   {
-    $sSQL = "select
-        (select count(*) from person_per ) as PersonCount
-        from dual ;";
-    $rsQuickStat = RunQuery($sSQL);
-    $row = mysql_fetch_array($rsQuickStat);
-    $data = ['personCount' => $row['PersonCount']];
+    $family  = PersonQuery::create()->withColumn('count(*)', "count")->findOne();
+    $data = ['personCount' => $family->getCount()];
     return $data;
   }
 
