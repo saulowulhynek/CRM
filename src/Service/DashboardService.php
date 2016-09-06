@@ -2,8 +2,15 @@
 
 namespace ChurchCRM\Service;
 
+use ChurchCRM\Base\ListOption;
 use ChurchCRM\FamilyQuery;
+use ChurchCRM\ListOptionQuery;
+use ChurchCRM\Map\ListOptionTableMap;
+use ChurchCRM\Map\PersonTableMap;
+use ChurchCRM\Person;
 use ChurchCRM\PersonQuery;
+use Propel\Runtime\ActiveQuery\Criteria;
+use Propel\Runtime\Propel;
 
 class DashboardService
 {
@@ -24,11 +31,15 @@ class DashboardService
 
   function getPersonStats()
   {
+    $dbData = ListOptionQuery::create()
+      ->addJoin(ListOptionTableMap::COL_LST_OPTIONID, PersonTableMap::COL_PER_CLS_ID)
+      ->addGroupByColumn(PersonTableMap::COL_PER_CLS_ID)
+      ->withColumn('count(*)', "count")
+      ->filterById(1)
+      ->find();
     $data = array();
-    $sSQL = "select lst_OptionName as Classification, count(*) as count from person_per, list_lst where per_cls_ID = lst_OptionID and lst_ID =1 group by per_cls_ID order by count desc;";
-    $rsClassification = RunQuery($sSQL);
-    while ($row = mysql_fetch_array($rsClassification)) {
-      $data[$row['Classification']] = $row['count'];
+    foreach ($dbData as $row) {
+      $data[$row->getOptionName()] = $row->getVirtualColumn("count");
     }
     return $data;
   }
