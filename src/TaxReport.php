@@ -17,7 +17,7 @@ require "Include/Config.php";
 require "Include/Functions.php";
 
 // If CSVAdminOnly option is enabled and user is not admin, redirect to the menu.
-if (!$_SESSION['bAdmin'] && $bCSVAdminOnly) {
+if (!$_SESSION['bAdmin'] && SystemConfig::getValue("bCSVAdminOnly")) {
 	Redirect("Menu.php");
 	exit;
 }
@@ -42,7 +42,7 @@ if (isset($_POST["Submit"])) {
 <table cellpadding="3" align="left">
 
    <tr>
-      <td class="LabelColumn"><?= gettext("Calendar Year:") ?></td>
+      <td class="LabelColumn"><?= gettext("Calendar Year") ?>:</td>
 		<td class="TextColumn"><input type="text" name="Year" id="Year" value="<?= $iYear ?>"></td>
    </tr>
 

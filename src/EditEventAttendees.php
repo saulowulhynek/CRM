@@ -4,9 +4,10 @@
 
 require "Include/Config.php";
 require "Include/Functions.php";
-require "Include/Header.php";
+
 
 $sPageTitle = gettext("Church Event Editor");
+require "Include/Header.php";
 
 $sAction = $_POST['Action'];
 $EventID = $_POST['EID']; // from ListEvents button=Attendees
@@ -25,28 +26,19 @@ if ($sAction=='Delete'){
 }
 // Construct the form
 ?>
-
-<form method="post" action="EditEventAttendees.php" name="AttendeeEditor">
-<input type="hidden" name="EID" value="<?= $EventID  ?>">
-<table cellpadding="0" cellspacing="0" width="75%" align="center">
-  <caption>
-    <h3><?= gettext("Attendees for Event ID: $EventID") ?></h3>
-  </caption>
-  <tr ><td colspan="4">
-    <table border="0" cellpadding="0" cellspacing="0" width="100%">
-      <tr>
-        <td align="center"><span class="SmallText"><?= gettext("<strong>Name:</strong> <br>$EvtName") ?></td>
-      <td align="center"><span class="SmallText"><?= gettext("<strong>Description:</strong> <br>$EvtDesc") ?></span></td>
-      <td align="center"><span class="SmallText"><?= gettext("<strong>Date:</strong><br>$EvtDate") ?></span></td>
-    </tr>
-    </table>
-    </td>
-    </tr>
-  <tr><td colspan="4"></td></tr>
-  <tr>
-    <td colspan="4" align="center"><input type="button" class="btn" value="<?= gettext("Back to Menu") ?>" Name="Exit" onclick="javascript:document.location='Menu.php';"></td>
- </tr>
-   <tr><td colspan="4"></td></tr>
+<div class='box'>
+  <div class='box-header'>
+    <h3 class='box-title'><?= gettext("Attendees for Event ID:") . " " . $EventID ?></h3>
+  </div>
+  <div class='box-body'>
+    <strong><?= gettext("Name")?>:</strong> <?= $EvtName ?><br/>
+    <strong><?= gettext("Date")?>:</strong> <?= $EvtDate ?><br/>
+    <strong><?= gettext("Description")?>:</strong><br/>
+    <?= $EvtDesc ?>
+    <p/>
+    <form method="post" action="EditEventAttendees.php" name="AttendeeEditor">
+      <input type="hidden" name="EID" value="<?= $EventID  ?>">
+  <table class="table">
   <tr class="TableHeader">
     <td width="35%"><strong><?= gettext("Name") ?></strong></td>
     <td width="25%"><strong><?= gettext("Email") ?></strong></td>
@@ -56,15 +48,15 @@ if ($sAction=='Delete'){
 <?php
 $sSQL = 'SELECT person_id, per_LastName FROM event_attend JOIN person_per ON person_per.per_id = event_attend.person_id WHERE event_id = '.$EventID.' ORDER by per_LastName, per_FirstName';
 $rsOpps = RunQuery($sSQL);
-$numAttRows = mysql_num_rows($rsOpps);
+$numAttRows = mysqli_num_rows($rsOpps);
 if($numAttRows!=0){
   $sRowClass = "RowColorA";
   for($na=0; $na<$numAttRows; $na++){
-    $attRow = mysql_fetch_array($rsOpps, MYSQL_BOTH);
+    $attRow = mysqli_fetch_array($rsOpps, MYSQLI_BOTH);
     extract($attRow);
     $sSQL = 'SELECT per_Title, per_ID, per_FirstName, per_MiddleName, per_LastName, per_Suffix, per_Email, per_HomePhone, per_Country, fam_HomePhone, fam_Email, fam_Country FROM person_per LEFT JOIN family_fam ON per_fam_id=fam_id WHERE per_ID = '.$person_id;
     $perOpps = RunQuery($sSQL);
-    $perRow = mysql_fetch_array($perOpps, MYSQL_BOTH);
+    $perRow = mysqli_fetch_array($perOpps, MYSQLI_BOTH);
     extract($perRow);
     $sRowClass = AlternateRowStyle($sRowClass);
 
@@ -85,7 +77,7 @@ if($numAttRows!=0){
           <input type="hidden" name="EName" value="<?= $EvtName ?>">
           <input type="hidden" name="EDesc" value="<?= $EvtDesc ?>">
           <input type="hidden" name="EDate" value="<?= $EvtDate ?>">
-          <input type="submit" name="Action" value="<?= gettext("Delete") ?>" class="btn" onClick="return confirm('Are you sure you want to DELETE this person from Event ID:<?= $EventID ?>')">
+          <input type="submit" name="Action" value="<?= gettext("Delete") ?>" class="btn" onClick="return confirm("<?= gettext("Are you sure you want to DELETE this person from Event ID: ") . $EventID ?>")">
       </form>
      </td>
     </tr>
@@ -99,5 +91,5 @@ if($numAttRows!=0){
 
 ?>
 </table>
-
+</div>
 <?php require "Include/Footer.php" ?>

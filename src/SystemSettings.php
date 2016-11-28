@@ -1,8 +1,8 @@
 <?php
 /*******************************************************************************
  *
- *  filename    : CSVExport.php
- *  description : options for creating csv file
+ *  filename    : SystemSettings.php
+ *  description : setup de systema settings
  *
  *  http://www.churchcrm.io/
  *  Copyright 2001-2002 Phillip Hullquist, Deane Barker
@@ -27,7 +27,12 @@
 // Include the function library
 require "Include/Config.php";
 require "Include/Functions.php";
-require "Include/TranslateMenuOptions.php";
+
+use ChurchCRM\dto\LocaleInfo;
+use ChurchCRM\data\Countries;
+use ChurchCRM\dto\SystemConfig;
+use ChurchCRM\ConfigQuery;
+use ChurchCRM\Config;
 
 // Security
 if (!$_SESSION['bAdmin']) {
@@ -38,48 +43,30 @@ if (!$_SESSION['bAdmin']) {
 // Set the page title and include HTML header
 $sPageTitle = gettext("System Settings");
 
-$steps = array(
-  "Step1" => "Church Information",
-  "Step2" => "User setup",
-  "Step3" => "Email Setup",
-  "Step4" => "Member Setup",
-  "Step5" => "System Settings",
-  "Step6" => "Map Settings",
-  "Step7" => "Report Settings",
-  "Step8" => "Other Settings",
-);
-
-
-$sSQL = "SELECT * FROM config_cfg ORDER BY cfg_category, cfg_order";
-$rsConfigs = RunQuery($sSQL);
-$iRowCount = 0;
-while ($aRow = mysql_fetch_array($rsConfigs)) {
-  $iRowCount++;
-  extract($aRow);
-  if ($cfg_name == "sHeader") {
-    $iHTMLHeaderRow = $iRowCount;
-  }
-}
-
 // Save Settings
 if (isset ($_POST['save'])) {
   $new_value = $_POST['new_value'];
   $type = $_POST['type'];
   ksort($type);
   reset($type);
+  
+  $iHTMLHeaderRow = ConfigQuery::create()->filterByName("sHeader")->findOne()->getId();
+  
   while ($current_type = current($type)) {
     $id = key($type);
     // Filter Input
     if ($id == $iHTMLHeaderRow)  // Special handling of header value so HTML doesn't get removed
-      $value = html_entity_decode($new_value[$id]);
-    elseif ($current_type == 'text' || $current_type == "textarea")
+      $value = FilterInput($new_value[$id], "htmltext");
+    elseif ($current_type == 'text' || $current_type == "textarea" || $current_type == "country")
       $value = FilterInput($new_value[$id]);
     elseif ($current_type == 'number')
       $value = FilterInput($new_value[$id], "float");
     elseif ($current_type == 'date')
       $value = FilterInput($new_value[$id], "date");
-     elseif ($current_type == 'json')
+    elseif ($current_type == 'json')
       $value = $new_value[$id];
+    elseif ($current_type == 'choice')
+      $value = FilterInput($new_value[$id]);
     elseif ($current_type == 'boolean') {
       if ($new_value[$id] != "1")
         $value = "";
@@ -88,56 +75,44 @@ if (isset ($_POST['save'])) {
     }
 
     // If changing the locale, translate the menu options
-    if ($id == 39 && $value != $sLanguage) {
-      $sLanguage = $value;
-      if (!(stripos(php_uname('s'), "windows") === false)) {
-        $sLang_Code = $lang_map_windows[strtolower($sLanguage)];
-      } else {
-        $sLang_Code = $sLanguage;
-      }
-      putenv("LANG=$sLang_Code");
-      setlocale(LC_ALL, $sLang_Code);
-
-      TranslateMenuOptions();
+    if ($id == 39 && $value != $localeInfo->getLocale()) {
+      $localeInfo = new LocaleInfo($value);
+      setlocale(LC_ALL, $localeInfo->getLocale());
+      $aLocaleInfo = $localeInfo->getLocaleInfo();
     }
-    
-      if ( $id == 65 && !( in_array ( $value, timezone_identifiers_list()))) 
-      {
-          $value = date_default_timezone_get();
-      }
 
-    // Save new setting
-    $sSQL = "UPDATE config_cfg SET cfg_value='$value' WHERE cfg_id='$id'";
-    $rsUpdate = RunQuery($sSQL);
+    if ($id == 65 && !(in_array($value, timezone_identifiers_list()))) {
+      $value = date_default_timezone_get();
+    }
+
+    SystemConfig::setValueById($id, $value);
     next($type);
   }
-  $sGlobalMessage = "Setting saved";
+  $sGlobalMessage = gettext("Setting saved");
 }
 
 require "Include/Header.php";
 
 // Get settings
-$sSQL = "SELECT * FROM config_cfg ORDER BY cfg_category, cfg_order";
-$rsConfigs = RunQuery($sSQL);
 ?>
 
 <div id="JSONSettingsModal" class="modal fade" role="dialog">
-    <div class="modal-dialog">
-      <!-- Modal content-->
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal">&times;</button>
-          <h4 class="modal-title">Edit JSON Settings</h4>
-        </div>
-        <div class="modal-body" id="JSONSettingsDiv">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary jsonSettingsClose">Save</button>
-          <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-        </div>
+  <div class="modal-dialog">
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title"><?= gettext("Edit JSON Settings") ?></h4>
+      </div>
+      <div class="modal-body" id="JSONSettingsDiv">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary jsonSettingsClose">Save</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
+</div>
 
 <div class="row">
   <div class="col-lg-12">
@@ -145,8 +120,10 @@ $rsConfigs = RunQuery($sSQL);
       <form method=post action=SystemSettings.php>
         <div class="nav-tabs-custom">
           <ul class="nav nav-tabs">
-            <?php foreach ($steps as $step => $stepName) { ?>
-              <li class="<?php if ($step == "Step1") echo "active" ?>"><a href="#<?= $step ?>" data-toggle="tab" aria-expanded="false"><?= $stepName ?></a></li>
+            <?php foreach (SystemConfig::getConfigSteps() as $step => $stepName) { ?>
+              <li class="<?php if ($step == "Step1") echo "active" ?>"><a href="#<?= $step ?>" data-toggle="tab"
+                                                                          aria-expanded="false"><?= $stepName ?></a>
+              </li>
             <?php } ?>
           </ul>
           <div class="tab-content">
@@ -154,16 +131,17 @@ $rsConfigs = RunQuery($sSQL);
               <table class="table table-striped">
                 <tr>
                   <th width="150px"><?= gettext("Variable name") ?></th>
-                  <th width="400px">Value</th>
-                  <th>Default Value</th>
+                  <th width="400px"><?= gettext("Value")?></th>
+                  <th><?= gettext("Default Value")?></th>
                 </tr>
                 <?php
                 $r = 1;
                 $step = "Step" . $r;
                 // List Individual Settings
-                while (list($cfg_id, $cfg_name, $cfg_value, $cfg_type, $cfg_default, $cfg_tooltip, $cfg_section, $cfg_category) = mysql_fetch_row($rsConfigs)) {
-                if ($cfg_category != $step) {
-                $step = $cfg_category;
+                $settings = ConfigQuery::create()->orderByCategory()->orderByOrder()->find();
+                foreach($settings as  $setting) {
+                if ($setting->getCategory() != $step) {
+                $step = $setting->getCategory();
                 ?>
               </table>
             </div>
@@ -171,65 +149,80 @@ $rsConfigs = RunQuery($sSQL);
               <table class="table table-striped">
                 <tr>
                   <th width="150px"><?= gettext("Variable name") ?></th>
-                  <th width="400px">Current Value</th>
-                  <th>Default Value</th>
+                  <th width="400px"><?= gettext("Current Value") ?></th>
+                  <th><?= gettext("Default Value") ?></th>
                 </tr>
                 <?php } ?>
                 <tr>
-                  <td><?= $cfg_name ?></td>
-                  <input type=hidden name='type[<?= $cfg_id ?>]' value='<?= $cfg_type ?>'>
+                  <td><?= $setting->getName() ?></td>
+                  <input type=hidden name='type[<?= $setting->getId() ?>]' value='<?= $setting->getType() ?>'>
                   <td>
                     <!--  Current Value -->
-                    <?php if ($cfg_name == "sTimeZone" ) {?>
-                    <select class="input-small" name='new_value[<?= $cfg_id ?>]' id="timeZoneSelectBox">
+                    <?php if ($setting->getName() == "sTimeZone") { ?>
+                      <select name='new_value[<?= $setting->getId() ?>]' class="choiceSelectBox" style="width: 100%">
                         <?php
-                            foreach (timezone_identifiers_list() as $timeZone)
-                            {
-                                echo "<option value = ". $timeZone." " . ($cfg_value == $timeZone ? "selected" : "") . ">".$timeZone."</option>";
-                            }
+                        foreach (timezone_identifiers_list() as $timeZone) {
+                          echo "<option value = '" . $timeZone . "'' " . ($setting->getValue() == $timeZone ? "selected" : "") . ">" . $timeZone . "</option>";
+                        }
                         ?>
-                    </select>
-                    <?php } elseif ($cfg_type == 'text') { ?>
-                      <input type=text class="col-lg-12" maxlength=255 name='new_value[<?= $cfg_id ?>]' value='<?= htmlspecialchars($cfg_value, ENT_QUOTES) ?>'>
-                    <?php } elseif ($cfg_type == 'textarea') { ?>
-                      <textarea rows=4 class="col-lg-12" name='new_value[<?= $cfg_id ?>]'><?= htmlspecialchars($cfg_value, ENT_QUOTES) ?></textarea>
-                    <?php } elseif ($cfg_type == 'number' || $cfg_type == 'date') { ?>
-                      <input type=text class="col-lg-12" maxlength=15 name='new_value[<?= $cfg_id ?>]' value='<?= $cfg_value ?>'>
-                    <?php } elseif ($cfg_type == 'boolean') {
-                      if ($cfg_value) {
+                      </select>
+                    <?php } elseif ($setting->getType() == 'country') { ?>
+                      <select name='new_value[<?= $setting->getId() ?>]' class="choiceSelectBox" style="width: 100%">
+                        <?php
+                        foreach (Countries::getNames() as $country) {
+                          echo "<option value = '" . $country . "'' " . ($setting->getValue() == $country ? "selected" : "") . ">" . gettext($country) . "</option>";
+                        }
+                        ?>
+                      </select>
+                    <?php } elseif ($setting->getType() == 'choice') { ?>
+                      <select name='new_value[<?= $setting->getId() ?>]' class="choiceSelectBox" style="width: 100%">
+                        <?php
+                        foreach (json_decode($setting->getData())->Choices as $choice) {
+                          echo "<option value = " . $choice . " " . ($setting->getValue() == $choice ? "selected" : "") . ">" . $choice . "</option>";
+                        }
+                        ?>
+                      </select>
+                    <?php } elseif ($setting->getType() == 'text') { ?>
+                      <input type=text size=40 maxlength=255 name='new_value[<?= $setting->getId() ?>]'
+                             value='<?= htmlspecialchars($setting->getValue(), ENT_QUOTES) ?>' class="form-control">
+                    <?php } elseif ($setting->getType() == 'textarea') { ?>
+                      <textarea rows=4 cols=40 name='new_value[<?= $setting->getId() ?>]'
+                                class="form-control"><?= htmlspecialchars($setting->getValue(), ENT_QUOTES) ?></textarea>
+                    <?php } elseif ($setting->getType() == 'number' || $setting->getType() == 'date') { ?>
+                      <input type=text size=40 maxlength=15 name='new_value[<?= $setting->getId() ?>]' value='<?= $setting->getValue() ?>'
+                             class="form-control">
+                    <?php } elseif ($setting->getType() == 'boolean') {
+                      if ($setting->getValue()) {
                         $sel1 = "";
                         $sel2 = "SELECTED";
                       } else {
                         $sel1 = "SELECTED";
                         $sel2 = "";
                       } ?>
-                      <select name='new_value[<?= $cfg_id ?>]'>
-                        <option value='' <?= $sel1 ?>>False
-                        <option value='1' <?= $sel2 ?>>True
+                      <select name='new_value[<?= $setting->getId() ?>]' class="choiceSelectBox" style="width: 100%">
+                        <option value='' <?= $sel1 ?>><?= gettext("False")?>
+                        <option value='1' <?= $sel2 ?>><?= gettext("True")?>
                       </select>
-                    <?php } elseif ($cfg_type == 'json') {
-                      ?>
-                      <input type="hidden" name='new_value[<?= $cfg_id ?>]' value='<?= $cfg_value ?>'>
-                      <button class="btn-primary jsonSettingsEdit" id="set_value<?= $cfg_id ?>" data-cfgid="<?= $cfg_id ?>">Edit Settings</button>
-                        
-                        
-                      <?php
-                      
-                    } ?>
+                    <?php } elseif ($setting->getType() == 'json') { ?>
+                      <input type="hidden" name='new_value[<?= $setting->getId() ?>]' value='<?= $setting->getValue() ?>'>
+                      <button class="btn-primary jsonSettingsEdit" id="set_value<?= $setting->getId() ?>"
+                              data-cfgid="<?= $setting->getId() ?>"><?= gettext("Edit Settings")?>
+                      </button>
+                    <?php } ?>
                   </td>
                   <?php
                   // Default Value
-                  $display_default = $cfg_default;
-                  if ($cfg_type == 'boolean') {
-                    if ($cfg_default)
+                  $display_default = $setting->getDefault();
+                  if ($setting->getType() == 'boolean') {
+                    if ($setting->getDefault())
                       $display_default = "True";
                     else
                       $display_default = "False";
                   }
                   ?>
                   <td>
-                    <?php if ($cfg_tooltip != "") { ?>
-                    <i class="fa fa-fw fa-question-circle" data-toggle="tooltip"  title="<?= $cfg_tooltip ?>"></i>
+                    <?php if ($setting->getTooltip() != "") { ?>
+                      <i class="fa fa-fw fa-question-circle" data-toggle="tooltip" title="<?= gettext($setting->getTooltip()) ?>"></i>
                     <?php } ?>
                     <?= $display_default ?>
                   </td>
@@ -241,16 +234,20 @@ $rsConfigs = RunQuery($sSQL);
             </div>
           </div>
         </div>
-        <input type=submit class='btn btn-primary' name=save value='<?= gettext("Save Settings") ?>'>
+        <input type=submit class='btn btn-primary' name=save value="<?= gettext("Save Settings") ?>">
     </div>
     </form>
   </div>
 </div>
 
 <script>
-$(document).ready(function(){
-   $("#timeZoneSelectBox").select2();
-}); 
+  $(document).ready(function () {
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      var target = $(e.target).attr("href") // activated tab
+      $(target + " .choiceSelectBox").select2({width: 'resolve'});
+    });
+    $(".choiceSelectBox").select2({width: 'resolve'});
+  });
 </script>
 <script src="skin/js/SystemSettings.js" type="text/javascript"></script>
 

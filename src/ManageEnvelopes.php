@@ -19,6 +19,8 @@ require "Include/Functions.php";
 
 require "Include/EnvelopeFunctions.php";
 
+use ChurchCRM\dto\SystemConfig;
+
 //Set the page title
 $sPageTitle = gettext("Envelope Manager");
 
@@ -33,7 +35,7 @@ $envelopesToWrite = array ();
 $envelopesByFamID = getEnvelopes($iClassification);
 
 // get the array of family name/description strings, also indexed by family id
-$familyArray = getFamilyList($sDirRoleHead, $sDirRoleSpouse, $iClassification);
+$familyArray = getFamilyList(SystemConfig::getValue("sDirRoleHead"), SystemConfig::getValue("sDirRoleSpouse"), $iClassification);
 asort($familyArray);
 
 if (isset($_POST["Confirm"])) {
@@ -68,7 +70,7 @@ if (isset($_POST["SortBy"])) {
 } else {
     $sSortBy = "name";
 }
-    
+
 if (isset($_POST["AssignStartNum"])) {
     $iAssignStartNum = $_POST["AssignStartNum"];
 } else {
@@ -80,7 +82,7 @@ if (isset($_POST["AssignStartNum"])) {
 //Get Classifications for the drop-down
 $sSQL = "SELECT * FROM list_lst WHERE lst_ID = 1 ORDER BY lst_OptionSequence";
 $rsClassifications = RunQuery($sSQL);
-while ($aRow = mysql_fetch_array($rsClassifications)) {
+while ($aRow = mysqli_fetch_array($rsClassifications)) {
     extract($aRow);
     $classification[$lst_OptionID] = $lst_OptionName;
 }
@@ -133,7 +135,7 @@ if (isset($_POST["PrintReport"])) {
                     <h4 class="modal-title" id="upload-Image-label"><?= gettext("Update Envelopes") ?></h4>
                 </div>
                 <div class="modal-body">
-                <span style="color:red">This will overwrite the family envelope numbers in the database with those selected on this page.  Continue?</span>
+                <span style="color:red"><?= gettext("This will overwrite the family envelope numbers in the database with those selected on this page.  Continue?")?></span>
                 </div>
                 <div class="modal-footer">
                     <input type="submit" class="btn btn-primary" value="<?= gettext("Confirm") ?>" name="Confirm">
@@ -147,7 +149,7 @@ if (isset($_POST["PrintReport"])) {
 <thead>
 <tr>
     <th>
-    <b>Family Select</b> with at least one: 
+    <b><?= gettext("Family Select")?></b> <?= gettext("with at least one:");?>
         <select name="Classification">
         <option value="0"><?= gettext("All") ?></option>
         <?php
@@ -162,7 +164,7 @@ if (isset($_POST["PrintReport"])) {
         <input type="radio" Name="SortBy" value="name"
         <?php if ($sSortBy == "name") echo " checked"; ?>><?= gettext("Last Name") ?>
         <input type="radio" Name="SortBy" value="envelope"
-        <?php if ($sSortBy == "envelope") echo " checked"; ?>><?= gettext("Envelope #") ?>
+        <?php if ($sSortBy == "envelope") echo " checked"; ?>><?= gettext("Envelope Number") ?>
     </th>
     <th>
         <b>Envelope</b>
@@ -205,7 +207,7 @@ foreach ($arrayToLoop as $fam_ID => $value) {
     </td></tr>
     <?php
 }
-?>    
+?>
 </table><br>
 </form>
 </div>
@@ -223,7 +225,7 @@ function getEnvelopes($classification) {
     $sSQL .= " ORDER by fam_Envelope";
     $dEnvelopes = RunQuery($sSQL);
     $envelopes = array ();
-    while ($aRow = mysql_fetch_array($dEnvelopes)) {
+    while ($aRow = mysqli_fetch_array($dEnvelopes)) {
         extract($aRow);
         $envelopes[$fam_ID] = $fam_Envelope;
     }

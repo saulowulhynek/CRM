@@ -32,7 +32,7 @@ $sSQL = "SELECT a.*, family_fam.*, cls.lst_OptionName AS sClassName, fmr.lst_Opt
 			LEFT JOIN person_per c ON a.per_EditedBy = c.per_ID
 			WHERE a.per_ID = " . $iPersonID;
 $rsPerson = RunQuery($sSQL);
-extract(mysql_fetch_array($rsPerson));
+extract(mysqli_fetch_array($rsPerson));
 
 // Save for later
 $sWorkEmail = trim($per_WorkEmail);
@@ -40,12 +40,12 @@ $sWorkEmail = trim($per_WorkEmail);
 // Get the list of custom person fields
 $sSQL = "SELECT person_custom_master.* FROM person_custom_master ORDER BY custom_Order";
 $rsCustomFields = RunQuery($sSQL);
-$numCustomFields = mysql_num_rows($rsCustomFields);
+$numCustomFields = mysqli_num_rows($rsCustomFields);
 
 // Get the actual custom field data
 $sSQL = "SELECT * FROM person_custom WHERE per_ID = " . $iPersonID;
 $rsCustomData = RunQuery($sSQL);
-$aCustomData = mysql_fetch_array($rsCustomData, MYSQL_BOTH);
+$aCustomData = mysqli_fetch_array($rsCustomData, MYSQLI_BOTH);
 
 // Get the notes for this person
 $sSQL = "SELECT nte_Private, nte_ID, nte_Text, nte_DateEntered, nte_EnteredBy, nte_DateLastEdited, nte_EditedBy, a.per_FirstName AS EnteredFirstName, a.Per_LastName AS EnteredLastName, b.per_FirstName AS EditedFirstName, b.per_LastName AS EditedLastName ";
@@ -78,7 +78,7 @@ $rsAssignedProperties = RunQuery($sSQL);
 $sSQL = "SELECT * FROM list_lst WHERE lst_ID = 5 ORDER BY lst_OptionSequence";
 $rsSecurityGrp = RunQuery($sSQL);
 
-while ($aRow = mysql_fetch_array($rsSecurityGrp))
+while ($aRow = mysqli_fetch_array($rsSecurityGrp))
 {
 	extract ($aRow);
 	$aSecurityType[$lst_OptionID] = $lst_OptionName;
@@ -110,9 +110,14 @@ $sCity = SelectWhichInfo($per_City, $fam_City, False);
 $sState = SelectWhichInfo($per_State, $fam_State, False);
 $sZip = SelectWhichInfo($per_Zip, $fam_Zip, False);
 $sCountry = SelectWhichInfo($per_Country, $fam_Country, False);
-$sHomePhone = SelectWhichInfo(ExpandPhoneNumber($per_HomePhone,$sCountry,$dummy), ExpandPhoneNumber($fam_HomePhone,$fam_Country,$dummy), False);
-$sWorkPhone = SelectWhichInfo(ExpandPhoneNumber($per_WorkPhone,$sCountry,$dummy), ExpandPhoneNumber($fam_WorkPhone,$fam_Country,$dummy), False);
-$sCellPhone = SelectWhichInfo(ExpandPhoneNumber($per_CellPhone,$sCountry,$dummy), ExpandPhoneNumber($fam_CellPhone,$fam_Country,$dummy), False);
+
+$sHomePhone = SelectWhichInfo(ExpandPhoneNumber($per_HomePhone,$sCountry,$dummy),
+  ExpandPhoneNumber($fam_HomePhone,$fam_Country,$dummy), False);
+$sWorkPhone = SelectWhichInfo(ExpandPhoneNumber($per_WorkPhone,$sCountry,$dummy),
+  ExpandPhoneNumber($fam_WorkPhone,$fam_Country,$dummy), False);
+$sCellPhone = SelectWhichInfo(ExpandPhoneNumber($per_CellPhone,$sCountry,$dummy),
+  ExpandPhoneNumber($fam_CellPhone,$fam_Country,$dummy), False);
+
 $sUnformattedEmail = SelectWhichInfo($per_Email, $fam_Email, False);
 
 // Set the page title and include HTML header
@@ -145,7 +150,7 @@ if ($fam_ID)
 {
 	//Get the family members for this family
 	$sSQL = "SELECT per_ID, per_Title, per_FirstName, per_LastName, per_Suffix, per_Gender,
-		per_BirthMonth, per_BirthDay, per_BirthYear, cls.lst_OptionName AS sClassName,
+		per_BirthMonth, per_BirthDay, per_BirthYear, per_Flags, cls.lst_OptionName AS sClassName,
 		fmr.lst_OptionName AS sFamRole
 		FROM person_per
 		LEFT JOIN list_lst cls ON per_cls_ID = cls.lst_OptionID AND cls.lst_ID = 1
@@ -163,17 +168,17 @@ if ($fam_ID)
 	<td width="33%" valign="top" align="left">
 		<table cellspacing="1" cellpadding="4">
 		<tr>
-			<td class="LabelColumn"><?= gettext("Home Phone:") ?></td>
+			<td class="LabelColumn"><?= gettext("Home Phone") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumn"><?= $sHomePhone ?>&nbsp;</td>
 		</tr>
 		<tr>
-			<td class="LabelColumn"><?= gettext("Work Phone:") ?></td>
+			<td class="LabelColumn"><?= gettext("Work Phone") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumn"><?= $sWorkPhone ?>&nbsp;</td>
 		</tr>
 		<tr>
-			<td class="LabelColumn"><?= gettext("Mobile Phone:") ?></td>
+			<td class="LabelColumn"><?= gettext("Mobile Phone") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumn"><?= $sCellPhone ?>&nbsp;</td>
 		</tr>
@@ -185,7 +190,7 @@ if ($fam_ID)
 
 			for($i = 1; $i <= $numColumn1Fields; $i++)
 			{
-				$Row = mysql_fetch_array($rsCustomFields);
+				$Row = mysqli_fetch_array($rsCustomFields);
 				extract($Row);
 				if ($aSecurityType[$custom_FieldSec] == 'bAll' || $_SESSION[$aSecurityType[$custom_FieldSec]])
 				{
@@ -202,7 +207,7 @@ if ($fam_ID)
 	<td width="33%" valign="top" align="left">
 		<table cellspacing="1" cellpadding="4">
 		<tr>
-			<td class="LabelColumn"><?= gettext("Gender:") ?></td>
+			<td class="LabelColumn"><?= gettext("Gender") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumn">
 				<?php
@@ -218,26 +223,26 @@ if ($fam_ID)
 			</td>
 		</tr>
 		<tr>
-			<td class="LabelColumn"><?= gettext("BirthDate:") ?></td>
+			<td class="LabelColumn"><?= gettext("Birth Date") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumn"><?= $dBirthDate ?>&nbsp;</td>
 		</tr>
 		<tr>
-			<td class="LabelColumn"><?= gettext("Family:") ?></td>
+			<td class="LabelColumn"><?= gettext("Family") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumn">
-			<?php if ($fam_Name != "") { echo $fam_Name; } else { echo "Unassigned"; } ?>
+			<?php if ($fam_Name != "") { echo $fam_Name; } else { echo gettext("Unassigned"); } ?>
 			&nbsp;</td>
 		</tr>
 		<tr>
-			<td class="LabelColumn"><?= gettext("Family Role:") ?></td>
+			<td class="LabelColumn"><?= gettext("Family Role") ?>:</td>
 			<td width="<?= $iTableSpacerWidth ?>"></td>
 			<td class="TextColumnWithBottomBorder"><?php if ($sFamRole != "") { echo $sFamRole; } else { echo gettext("Unassigned"); } ?>&nbsp;</td>
 		</tr>
 		<?php
 			for($i = 1; $i <= $numColumn2Fields; $i++)
 			{
-				$Row = mysql_fetch_array($rsCustomFields);
+				$Row = mysqli_fetch_array($rsCustomFields);
 				extract($Row);
 				$currentData = trim($aCustomData[$custom_Field]);
 				if ($type_ID == 11) $custom_Special = $sCountry;
@@ -250,29 +255,29 @@ if ($fam_ID)
 	<td width="33%" valign="top" align="left">
 		<table cellspacing="1" cellpadding="4">
 			<tr>
-				<td class="LabelColumn"><?= gettext("Email:") ?></td>
+				<td class="LabelColumn"><?= gettext("Email") ?>:</td>
 				<td width="<?= $iTableSpacerWidth ?>"></td>
 				<td class="TextColumnWithBottomBorder"><?= $sUnformattedEmail ?>&nbsp;</td>
 			</tr>
 			<tr>
-				<td class="LabelColumn"><?= gettext("Work / Other Email:") ?></td>
+				<td class="LabelColumn"><?= gettext("Work / Other Email") ?>:</td>
 				<td width="<?= $iTableSpacerWidth ?>"></td>
 				<td class="TextColumnWithBottomBorder"><?= $sWorkEmail ?>&nbsp;</td>
 			</tr>
 			<tr>
-				<td class="LabelColumn"><?= gettext("Membership Date:") ?></td>
+				<td class="LabelColumn"><?= gettext("Membership Date") ?>:</td>
 				<td width="<?= $iTableSpacerWidth ?>"></td>
 				<td class="TextColumn"><?= FormatDate($per_MembershipDate,false) ?>&nbsp;</td>
 			</tr>
 			<tr>
-				<td class="LabelColumn"><?= gettext("Classification:") ?></td>
+				<td class="LabelColumn"><?= gettext("Classification") ?>:</td>
 				<td width="<?= $iTableSpacerWidth ?>"></td>
 				<td class="TextColumnWithBottomBorder"><?= $sClassName ?>&nbsp;</td>
 			</tr>
 		<?php
 			for($i = 1; $i <= $numColumn3Fields; $i++)
 			{
-				$Row = mysql_fetch_array($rsCustomFields);
+				$Row = mysqli_fetch_array($rsCustomFields);
 				extract($Row);
 				$currentData = trim($aCustomData[$custom_Field]);
 				if ($type_ID == 11) $custom_Special = $sCountry;
@@ -288,7 +293,7 @@ if ($fam_ID)
 
 <?php if ($fam_ID) {  ?>
 
-<b><?= gettext("Family Members:") ?></b>
+<b><?= gettext("Family Members") ?>:</b>
 <table cellpadding=5 cellspacing=0 width="100%">
 	<tr class="TableHeader">
 		<td><?= gettext("Name") ?></td>
@@ -300,7 +305,7 @@ if ($fam_ID)
 	$sRowClass = "RowColorA";
 
 	// Loop through all the family members
-	while ($aRow = mysql_fetch_array($rsFamilyMembers))
+	while ($aRow = mysqli_fetch_array($rsFamilyMembers))
 	{
 		$per_BirthYear = "";
 		$agr_Description = "";
@@ -323,8 +328,8 @@ if ($fam_ID)
 			<td>
 				<?= $sFamRole ?>&nbsp;
 			</td>
-			<td>
-				<?php PrintAge($per_BirthMonth,$per_BirthDay,$per_BirthYear, $per_Flags); ?>
+			<td data-birth-date="<?= $per_Flags == 1 ? "" : date_create($per_BirthYear . "-" . $per_BirthMonth . "-" . $per_BirthDay)->format("Y-m-d") ?>">
+
 			</td>
 		</tr>
 	<?php
@@ -333,7 +338,7 @@ if ($fam_ID)
 }
 ?>
 <BR>
-<b><?= gettext("Assigned Groups:") ?></b>
+<b><?= gettext("Assigned Groups") ?>:</b>
 
 <?php
 
@@ -343,7 +348,7 @@ $sRowClass = "RowColorA";
 $sAssignedGroups = ",";
 
 //Was anything returned?
-if (mysql_num_rows($rsAssignedGroups) == 0)
+if (mysqli_num_rows($rsAssignedGroups) == 0)
 {
 	echo "<p align\"center\">" . gettext("No group assignments.") . "</p>";
 }
@@ -356,7 +361,7 @@ else
 	echo "</tr>";
 
 	//Loop through the rows
-	while ($aRow = mysql_fetch_array($rsAssignedGroups))
+	while ($aRow = mysqli_fetch_array($rsAssignedGroups))
 	{
 		extract($aRow);
 
@@ -380,9 +385,9 @@ else
 
 			$sSQL = "SELECT * FROM groupprop_" . $grp_ID . " WHERE per_ID = " . $iPersonID;
 			$rsPersonProps = RunQuery($sSQL);
-			$aPersonProps = mysql_fetch_array($rsPersonProps, MYSQL_BOTH);
+			$aPersonProps = mysqli_fetch_array($rsPersonProps, MYSQLI_BOTH);
 
-			while ($aProps = mysql_fetch_array($rsPropList))
+			while ($aProps = mysqli_fetch_array($rsPropList))
 			{
 				extract($aProps);
 				$currentData = trim($aPersonProps[$prop_Field]);
@@ -408,7 +413,7 @@ else
 }
 ?>
 <BR>
-<b><?= gettext("Assigned Properties:") ?></b>
+<b><?= gettext("Assigned Properties") ?>:</b>
 
 <?php
 
@@ -418,7 +423,7 @@ $sRowClass = "RowColorA";
 $sAssignedProperties = ",";
 
 //Was anything returned?
-if (mysql_num_rows($rsAssignedProperties) == 0)
+if (mysqli_num_rows($rsAssignedProperties) == 0)
 {
 	echo "<p align\"center\">" . gettext("No property assignments.") . "</p>";
 }
@@ -430,7 +435,7 @@ else
 	echo "<td valign=\"top\"><b>" . gettext("Value") . "</td>";
 	echo "</tr>";
 
-	while ($aRow = mysql_fetch_array($rsAssignedProperties))
+	while ($aRow = mysqli_fetch_array($rsAssignedProperties))
 	{
 		$pro_Prompt = "";
 		$r2p_Value = "";
@@ -457,7 +462,7 @@ if ($_SESSION['bNotes'])
 	echo "<p><b>" . gettext("Notes:") . "</b></p>";
 
 	// Loop through all the notes
-	while($aRow = mysql_fetch_array($rsNotes))
+	while($aRow = mysqli_fetch_array($rsNotes))
 	{
 		extract($aRow);
 		echo "<p class=\"ShadedBox\")>" . $nte_Text . "</p>";
@@ -465,10 +470,11 @@ if ($_SESSION['bNotes'])
 
 		if (strlen($nte_DateLastEdited))
 		{
-			echo "<span class=\"SmallText\">" . gettext("Last Edited:") . FormatDate($nte_DateLastEdited,True) . ' ' . gettext("by") . ' ' . $EditedFirstName . " " . $EditedLastName . "</span><br>";
+			echo "<span class=\"SmallText\">" . gettext("Last Edited") . FormatDate($nte_DateLastEdited,True) . ' ' . gettext("by") . ' ' . $EditedFirstName . " " . $EditedLastName . "</span><br>";
 		}
 	}
 }
 
 require "Include/Footer-Short.php";
 ?>
+<script src="<?= $sRootPath ?>/skin/js/ShowAge.js"></script>

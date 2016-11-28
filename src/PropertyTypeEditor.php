@@ -72,7 +72,7 @@ if (isset($_POST["Submit"]))
 } elseif ($iPropertyTypeID > 0) {
 	//Get the data on this property
 	$sSQL = "SELECT * FROM propertytype_prt WHERE prt_ID = " . $iPropertyTypeID;
-	$rsProperty = mysql_fetch_array(RunQuery($sSQL));
+	$rsProperty = mysqli_fetch_array(RunQuery($sSQL));
 	extract($rsProperty);
 
 	//Assign values locally
@@ -93,7 +93,7 @@ require "Include/Header.php";
 
 <table class="table">
 	<tr>
-		<td align="right"><b><?= gettext("Class:") ?></b></td>
+		<td align="right"><b><?= gettext("Class") ?>:</b></td>
 		<td>
 			<select name="Class">
 				<option value="p" <?php if($sClass == "p") {echo "selected";} ?>><?= gettext("Person") ?></option>
@@ -103,12 +103,12 @@ require "Include/Header.php";
 		</td>
 	</tr>
 	<tr>
-		<td align="right"><b><?= gettext("Name:") ?></b></td>
+		<td align="right"><b><?= gettext("Name") ?>:</b></td>
 		<td><input type="text" name="Name" value="<?= htmlentities(stripslashes($sName),ENT_NOQUOTES, "UTF-8") ?>" size="40"> 			<?= $sNameError ?>
 		</td>
 	</tr>
 	<tr>
-		<td align="right" valign="top"><b><?= gettext("Description:") ?></b></td>
+		<td align="right" valign="top"><b><?= gettext("Description") ?>:</b></td>
 		<td><textarea name="Description" cols="60" rows="10"><?= htmlentities(stripslashes($sDescription),ENT_NOQUOTES, "UTF-8") ?></textarea></td>
 	</tr>
 	<tr>

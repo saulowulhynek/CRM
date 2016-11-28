@@ -18,13 +18,12 @@
 // Include the function library
 require "Include/Config.php";
 require "Include/Functions.php";
-use ChurchCRM\Service\NoteService;
+use ChurchCRM\Note;
 
 if (!$_SESSION['bAdmin']) {
     Redirect("Menu.php");
     exit;
 }
-$noteService = new NoteService();
 /**
   Class to store family data so we can assign roles once we have all members.
   A monogamous society is assumed, however  it can be patriarchal or matriarchal
@@ -123,7 +122,7 @@ require "Include/Header.php"; ?>
 
 <div class="box">
 <div class="box-header">
-<h3 class="box-title">Import Data</h3>
+<h3 class="box-title"><?= gettext("Import Data")?></h3>
 </div>
 <div class="box-body">
 
@@ -186,7 +185,7 @@ if (isset($_POST["UploadCSV"]))
         $rsCustomFields = RunQuery($sSQL);
 
         $sPerCustomFieldList = "";
-        while ($aRow = mysql_fetch_array($rsCustomFields))
+        while ($aRow = mysqli_fetch_array($rsCustomFields))
         {
             extract($aRow);
             // No easy way to import person-from-group or custom-list types
@@ -200,7 +199,7 @@ if (isset($_POST["UploadCSV"]))
         $rsfamCustomFields = RunQuery($sSQL);
 
         $sFamCustomFieldList = "";
-        while ($aRow = mysql_fetch_array($rsfamCustomFields))
+        while ($aRow = mysqli_fetch_array($rsfamCustomFields))
         {
             extract($aRow);
             if ($type_ID != 9 && $type_ID != 12)
@@ -213,7 +212,7 @@ if (isset($_POST["UploadCSV"]))
         $sSQL = "SELECT * FROM list_lst WHERE lst_ID = 5 ORDER BY lst_OptionSequence";
         $rsSecurityGrp = RunQuery($sSQL);
 
-        while ($aRow = mysql_fetch_array($rsSecurityGrp))
+        while ($aRow = mysqli_fetch_array($rsSecurityGrp))
         {
             extract ($aRow);
             $aSecurityType[$lst_OptionID] = $lst_OptionName;
@@ -234,8 +233,8 @@ if (isset($_POST["UploadCSV"]))
                 <option value="5"><?= gettext("Suffix") ?></option>
                 <option value="6"><?= gettext("Gender") ?></option>
                 <option value="7"><?= gettext("Donation Envelope") ?></option>
-                <option value="8"><?= gettext("Address1") ?></option>
-                <option value="9"><?= gettext("Address2") ?></option>
+                <option value="8"><?= gettext("Address") ?> 1</option>
+                <option value="9"><?= gettext("Address") ?> 2</option>
                 <option value="10"><?= gettext("City") ?></option>
                 <option value="11"><?= gettext("State") ?></option>
                 <option value="12"><?= gettext("Zip") ?></option>
@@ -281,7 +280,7 @@ if (isset($_POST["UploadCSV"]))
         <?= gettext("NOTE: Separators (dashes, etc.) or lack thereof do not matter") ?>
         <BR><BR>
         <?php
-            $sCountry = $sDefaultCountry;
+            $sCountry = SystemConfig::getValue("sDefaultCountry");
             require "Include/CountryDropDown.php";
             echo gettext("Default country if none specified otherwise");
 
@@ -294,7 +293,7 @@ if (isset($_POST["UploadCSV"]))
             <option value="0">-----------------------</option>
 
             <?php
-                while ($aRow = mysql_fetch_array($rsClassifications))
+                while ($aRow = mysqli_fetch_array($rsClassifications))
                 {
                     extract($aRow);
                     echo "<option value=\"" . $lst_OptionID . "\"";
@@ -374,7 +373,7 @@ if (isset($_POST["DoImport"]))
             $sSQL = "SELECT * FROM person_custom_master";
             $rsCustomFields = RunQuery($sSQL);
 
-            while ($aRow = mysql_fetch_array($rsCustomFields))
+            while ($aRow = mysqli_fetch_array($rsCustomFields))
             {
                 extract($aRow);
                 $aCustomTypes[$custom_Field] = $type_ID;
@@ -383,7 +382,7 @@ if (isset($_POST["DoImport"]))
             $sSQL = "SELECT * FROM family_custom_master";
             $rsfamCustomFields = RunQuery($sSQL);
 
-            while ($aRow = mysql_fetch_array($rsfamCustomFields))
+            while ($aRow = mysqli_fetch_array($rsfamCustomFields))
             {
                 extract($aRow);
                 $afamCustomTypes[$fam_custom_Field] = $type_ID;
@@ -410,7 +409,7 @@ if (isset($_POST["DoImport"]))
             $iBirthYear = 0; $iBirthMonth = 0; $iBirthDay = 0; $iGender = 0; $dWedding = "0000-00-00";
             $sAddress1 = ""; $sAddress2 = ""; $sCity = ""; $sState = ""; $sZip = "";
             // Use the default country from the mapping form in case we don't find one otherwise
-            $sCountry = $sDefaultCountry;
+            $sCountry = SystemConfig::getValue("sDefaultCountry");
             $iEnvelope = 0;
 
             $sSQLpersonFields = "INSERT INTO person_per (";
@@ -498,7 +497,7 @@ if (isset($_POST["DoImport"]))
                             {
                                 $sSQL = "SELECT '' FROM person_per WHERE per_Envelope = " . $iEnv;
                                 $rsTemp = RunQuery($sSQL);
-                                if (mysql_num_rows($rsTemp) == 0)
+                                if (mysqli_num_rows($rsTemp) == 0)
                                     $iEnvelope = $iEnv;
                                 else
                                     $iEnvelope = 0;
@@ -599,10 +598,10 @@ if (isset($_POST["DoImport"]))
             if (isset($_POST["MakeFamilyRecords"])) {
                 $sSQL = "SELECT MAX(per_ID) AS iPersonID FROM person_per";
                 $rsPersonID = RunQuery($sSQL);
-                extract(mysql_fetch_array($rsPersonID));
+                extract(mysqli_fetch_array($rsPersonID));
                 $sSQL = "SELECT * FROM person_per WHERE per_ID = " . $iPersonID;
                 $rsNewPerson = RunQuery($sSQL);
-                extract(mysql_fetch_array($rsNewPerson));
+                extract(mysqli_fetch_array($rsNewPerson));
 
                 // see if there is a family...
                 if (!isset($_POST["MakeFamilyRecordsMode"]) || $_POST["MakeFamilyRecordsMode"] == "0")
@@ -628,9 +627,9 @@ if (isset($_POST["DoImport"]))
                 }
                 $rsExistingFamily = RunQuery($sSQL);
                 $famid = 0;
-                if(mysql_num_rows($rsExistingFamily) > 0)
+                if(mysqli_num_rows($rsExistingFamily) > 0)
                 {
-                    extract(mysql_fetch_array($rsExistingFamily));
+                    extract(mysqli_fetch_array($rsExistingFamily));
                     $famid = $fam_ID;
                     if(array_key_exists($famid, $Families))
                         $Families[$famid]->AddMember($per_ID,
@@ -674,9 +673,14 @@ if (isset($_POST["DoImport"]))
 
                     $sSQL = "SELECT LAST_INSERT_ID()";
                     $rsFid = RunQuery($sSQL);
-                    $aFid = mysql_fetch_array($rsFid);
+                    $aFid = mysqli_fetch_array($rsFid);
                     $famid =  $aFid[0];
-                    $noteService->addNote(0, $famid, 0, "Imported", "create");
+                    $note = new Note();
+                    $note->setFamId($famid);
+                    $note->setText(gettext("Imported"));
+                    $note->setType("create");
+                    $note->setEntered($_SESSION['iUserID']);
+                    $note->save();
                     $sSQL = "INSERT INTO `family_custom` (`fam_ID`) VALUES ('" . $famid . "')";
                     RunQuery($sSQL);
 
@@ -697,7 +701,7 @@ if (isset($_POST["DoImport"]))
                     // Check if family_custom record exists
                     $sSQL = "SELECT fam_id FROM family_custom WHERE fam_id = $famid";
                     $rsFamCustomID = RunQuery($sSQL);
-                    if (mysql_num_rows($rsFamCustomID) == 0)
+                    if (mysqli_num_rows($rsFamCustomID) == 0)
                     {
                         $sSQL = "INSERT INTO `family_custom` (`fam_ID`) VALUES ('" . $famid . "')";
                         RunQuery($sSQL);
@@ -748,8 +752,13 @@ if (isset($_POST["DoImport"]))
             // Get the last inserted person ID and insert a dummy row in the person_custom table
             $sSQL = "SELECT MAX(per_ID) AS iPersonID FROM person_per";
             $rsPersonID = RunQuery($sSQL);
-            extract(mysql_fetch_array($rsPersonID));
-            $noteService->addNote($iPersonID, 0, 0, "Imported", "create");
+            extract(mysqli_fetch_array($rsPersonID));
+            $note = new Note();
+            $note->setPerId($iPersonID);
+            $note->setText(gettext("Imported"));
+            $note->setType("create");
+            $note->setEntered($_SESSION['iUserID']);
+            $note->save();
             if ($bHasCustom)
             {
                 $sSQL = "INSERT INTO `person_custom` (`per_ID`) VALUES ('" . $iPersonID . "')";
@@ -805,9 +814,9 @@ if (isset($_POST["DoImport"]))
         unlink($csvTempFile);
 
         // role assignments from config
-        $aDirRoleHead = explode(",",$sDirRoleHead);
-        $aDirRoleSpouse = explode(",",$sDirRoleSpouse);
-        $aDirRoleChild = explode(",",$sDirRoleChild);
+        $aDirRoleHead = explode(",",SystemConfig::getValue("sDirRoleHead"));
+        $aDirRoleSpouse = explode(",",SystemConfig::getValue("sDirRoleSpouse"));
+        $aDirRoleChild = explode(",",SystemConfig::getValue("sDirRoleChild"));
 
         // update roles now that we have complete family data.
         foreach($Families as $fid=>$family)
@@ -889,7 +898,7 @@ if ($iStage == 1)
         </div>
         <div class="box">
         <div class="box-header">
-        <h3 class="box-title">Clear Data</h3>
+        <h3 class="box-title"><?= gettext("Clear Data")?></h3>
         </div>
         <div class="box-body">
         <form method="post" action="CSVImport.php" enctype="multipart/form-data">

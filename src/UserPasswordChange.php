@@ -28,6 +28,8 @@ require "Include/Config.php";
 $bNoPasswordRedirect = true; // Subdue UserPasswordChange redirect to prevent looping
 require "Include/Functions.php";
 
+use ChurchCRM\dto\SystemConfig;
+
 $bAdminOtherUser = false;
 $bAdminOther = false;
 $bError = false;
@@ -98,10 +100,10 @@ if (isset($_POST["Submit"]))
         // Get the data on this user so we can confirm the old password
         $sSQL = "SELECT * FROM user_usr, person_per ".
                 "WHERE per_ID = usr_per_ID AND usr_per_ID = " . $iPersonID;
-        extract(mysql_fetch_array(RunQuery($sSQL)));
+        extract(mysqli_fetch_array(RunQuery($sSQL)));
 
         // Build the array of bad passwords
-        $aBadPasswords = explode(",", strtolower($sDisallowedPasswords));
+        $aBadPasswords = explode(",", strtolower(SystemConfig::getValue("sDisallowedPasswords")));
         $aBadPasswords[] = strtolower($per_FirstName);
         $aBadPasswords[] = strtolower($per_MiddleName);
         $aBadPasswords[] = strtolower($per_LastName);
@@ -143,8 +145,8 @@ if (isset($_POST["Submit"]))
         }
 
         // Is the password valid for length?
-        elseif (strlen($sNewPassword1) < $sMinPasswordLength) {
-            $sNewPasswordError = "<br><font color=\"red\">" . gettext("Your new password must be at least") . " " . $sMinPasswordLength . " " . gettext("characters") . "</font>";
+        elseif (strlen($sNewPassword1) < SystemConfig::getValue("sMinPasswordLength")) {
+            $sNewPasswordError = "<br><font color=\"red\">" . gettext("Your new password must be at least") . " " . SystemConfig::getValue("sMinPasswordLength") . " " . gettext("characters") . "</font>";
             $bError = True;
         }
 
@@ -154,7 +156,7 @@ if (isset($_POST["Submit"]))
             $bError = True;
         }
 
-        elseif (levenshtein(strtolower($sNewPassword1),strtolower($sOldPassword)) < $sMinPasswordChange) {
+        elseif (levenshtein(strtolower($sNewPassword1),strtolower($sOldPassword)) < SystemConfig::getValue("sMinPasswordChange")) {
             $sNewPasswordError = "<br><font color=\"red\">" . gettext("Your new password is too similar to your old one.  Be more creative!") . "</font>";
             $bError = True;
         }
@@ -208,7 +210,7 @@ if ($_SESSION['bNeedPasswordChange']) { ?>
         <div class="box box-primary">
             <div class="box-header with-border">
                 <?php if (!$bAdminOtherUser)
-                    echo "<p>" . gettext("Enter your current password, then your new password twice.  Passwords must be at least") . ' ' . $sMinPasswordLength . ' ' . gettext("characters in length.") . "</p>";
+                    echo "<p>" . gettext("Enter your current password, then your new password twice.  Passwords must be at least") . ' ' . SystemConfig::getValue("sMinPasswordLength") . ' ' . gettext("characters in length.") . "</p>";
                 else
                     echo "<p>" . gettext("Enter a new password for this user.") . "</p>";
                 ?>
@@ -219,16 +221,16 @@ if ($_SESSION['bNeedPasswordChange']) { ?>
                 <div class="box-body">
                     <?php if (!$bAdminOtherUser) { ?>
                     <div class="form-group">
-                        <label for="OldPassword"><?= gettext("Old Password:") ?></label>
+                        <label for="OldPassword"><?= gettext("Old Password") ?>:</label>
                         <input type="password" name="OldPassword" id="OldPassword" class="form-control" value="<?= $sOldPassword ?>" autofocus><?= $sOldPasswordError ?>
                     </div>
                     <?php } ?>
                     <div class="form-group">
-                        <label for="NewPassword1"><?= gettext("New Password:") ?></label>
+                        <label for="NewPassword1"><?= gettext("New Password") ?>:</label>
                         <input type="password" name="NewPassword1" id="NewPassword1" class="form-control" value="<?= $sNewPassword1 ?>">
                     </div>
                     <div class="form-group">
-                        <label for="NewPassword2"><?= gettext("Confirm New Password:") ?></label>
+                        <label for="NewPassword2"><?= gettext("Confirm New Password") ?>:</label>
                         <input type="password" name="NewPassword2" id="NewPassword2"  class="form-control" value="<?= $sNewPassword2 ?>"><?= $sNewPasswordError ?>
                     </div>
                 </div>

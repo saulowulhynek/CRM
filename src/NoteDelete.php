@@ -36,7 +36,7 @@ $iNoteID = FilterInput($_GET["NoteID"],'int');
 //Get the data on this note
 $sSQL = "SELECT * FROM note_nte WHERE nte_ID = " . $iNoteID;
 $rsNote = RunQuery($sSQL);
-extract(mysql_fetch_array($rsNote));
+extract(mysqli_fetch_array($rsNote));
 
 //If deleting a note for a person, set the PersonView page as the redirect
 if ($nte_per_ID > 0)
@@ -65,7 +65,7 @@ require "Include/Header.php";
 ?>
 <div class="box box-warning">
   <div class="box-header with-border">
-	<?= gettext("Please confirm deletion of this note:") ?>
+	<?= gettext("Please confirm deletion of this note") ?>:
   </div>
   <div class="box-body">
     <?= $nte_Text ?>

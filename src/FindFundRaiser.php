@@ -68,20 +68,20 @@ require "Include/Header.php";
 		<td>
 		<table cellpadding="3">
 			<tr>
-				<td class="LabelColumn"><?= gettext("Number:") ?></td>
+				<td class="LabelColumn"><?= gettext("Number") ?>:</td>
 				<td class="TextColumn"><input type="text" name="ID" id="ID" value="<?= $iID ?>"></td>
 			</tr>
 
 			<tr>
-				<td class="LabelColumn"><?= gettext("Date Start:") ?></td>
-				<td class="TextColumn"><input type="text" name="DateStart" maxlength="10" id="DateStart" size="11" value="<?= $dDateStart ?>"></td>
+                <td class="LabelColumn"><?= gettext("Date Start") ?>:</td>
+				<td class="TextColumn"><input type="text" name="DateStart" maxlength="10" id="DateStart" size="11" value="<?= $dDateStart ?>" class="date-picker"></td>
 				<td align="center">
 					<input type="submit" class="btn btn-primary" value="<?= gettext("Apply Filters") ?>" name="FindFundRaiserSubmit">
 				</td>
 			</tr>
 			<tr>
-				<td class="LabelColumn"><?= gettext("Date End:") ?></td>
-				<td class="TextColumn"><input type="text" name="DateEnd" maxlength="10" id="DateEnd" size="11" value="<?= $dDateEnd ?>"></td>
+				<td class="LabelColumn"><?= gettext("Date End") ?>:</td>
+				<td class="TextColumn"><input type="text" name="DateEnd" maxlength="10" id="DateEnd" size="11" value="<?= $dDateEnd ?>" class="date-picker"></td>
 				<td align="center">
 					<input type="submit" class="btn btn-danger" value="<?= gettext("Clear Filters") ?>" name="FilterClear">
 				</td>
@@ -97,9 +97,11 @@ require "Include/Header.php";
 // Save record limit if changed
 if (isset($_GET["Number"]))
 {
-	$_SESSION['SearchLimit'] = FilterInput($_GET["Number"],'int');
-	$uSQL = "UPDATE user_usr SET usr_SearchLimit = " . $_SESSION['SearchLimit'] . " WHERE usr_per_ID = " . $_SESSION['iUserID'];
-	$rsUser = RunQuery($uSQL);
+  /* @var $currentUser \ChurchCRM\User */
+  $currentUser = $_SESSION['user'];
+  $currentUser->setSearchLimit(FilterInput($_GET["Number"],'int'));
+  $currentUser->save();
+  $_SESSION['SearchLimit'] = $currentUser->getSearchLimit();
 }
 
 // Select the proper sort SQL
@@ -128,7 +130,7 @@ $sSQLTotal = "SELECT COUNT(fr_ID) FROM fundraiser_fr $sCriteria";
 // Execute SQL statement and get total result
 $rsDep = RunQuery($sSQL);
 $rsTotal = RunQuery($sSQLTotal);
-list ($Total) = mysql_fetch_row($rsTotal);
+list ($Total) = mysqli_fetch_row($rsTotal);
 
 echo '<div align="center">';
 echo  '<form action="FindFundRaiser.php" method="get" name="ListNumber">';
@@ -205,7 +207,7 @@ if ($_SESSION['SearchLimit'] == "25")
 	$sLimit25 = "selected";
 if ($_SESSION['SearchLimit'] == "50")
 	$sLimit50 = "selected";
-			
+
 echo "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;". gettext("Display:") . "&nbsp;
 	<select class=\"SmallText\" name=\"Number\">
 		<option value=\"5\" $sLimit5>5</option>
@@ -227,7 +229,7 @@ echo "<table cellpadding='4' align='center' cellspacing='0' width='100%'>\n
 	</tr>";
 
 // Display Deposits
-while (list ($fr_ID, $fr_Date, $fr_Title) = mysql_fetch_row($rsDep))
+while (list ($fr_ID, $fr_Date, $fr_Title) = mysqli_fetch_row($rsDep))
 {
 	echo "<tr><td><a href='FundRaiserEditor.php?FundRaiserID=$fr_ID'>" . gettext("Edit") . "</td>";
 	echo "<td>$fr_ID</td>";
@@ -237,9 +239,5 @@ while (list ($fr_ID, $fr_Date, $fr_Title) = mysql_fetch_row($rsDep))
 }
 echo "</table>";
 ?>
-<script>
-$("#DateStart").datepicker({format:'yyyy-mm-dd'});
-$("#DateEnd").datepicker({format:'yyyy-mm-dd'});
-</script>
 </div>
 <?php require "Include/Footer.php" ?>

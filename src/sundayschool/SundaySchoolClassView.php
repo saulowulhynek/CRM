@@ -4,6 +4,7 @@ require "../Include/Config.php";
 require "../Include/Functions.php";
 
 use ChurchCRM\Service\SundaySchoolService;
+use ChurchCRM\dto\SystemConfig;
 
 $sundaySchoolService = new SundaySchoolService();
 
@@ -15,7 +16,7 @@ if (isset($_GET['groupId'])) {
 
 $sSQL = "select * from group_grp where grp_ID =" . $iGroupId;
 $rsSundaySchoolClass = RunQuery($sSQL);
-while ($aRow = mysql_fetch_array($rsSundaySchoolClass)) {
+while ($aRow = mysqli_fetch_array($rsSundaySchoolClass)) {
   $iGroupName = $aRow['grp_Name'];
 }
 
@@ -33,7 +34,7 @@ $genderChartJSON = implode(",", $genderChartArray);
 
 
 $rsTeachers = $sundaySchoolService->getClassByRole($iGroupId, "Teacher");
-$sPageTitle = gettext("Sunday School: ") . $iGroupName;
+$sPageTitle = gettext("Sunday School") . ": " . $iGroupName;
 
 $TeachersEmails = array();
 $KidsEmails = array();
@@ -70,8 +71,8 @@ require "../Include/Header.php";
     $roleEmails->Kids = join($sMailtoDelimiter, $KidsEmails) . ",";
     $sEmailLink = join($sMailtoDelimiter, $allEmails) . ",";
     // Add default email if default email has been set and is not already in string
-    if ($sToEmailAddress != '' && $sToEmailAddress != 'myReceiveEmailAddress' && !stristr($sEmailLink, $sToEmailAddress))
-      $sEmailLink .= $sMailtoDelimiter . $sToEmailAddress;
+    if (SystemConfig::getValue("sToEmailAddress") != '' && SystemConfig::getValue("sToEmailAddress") != 'myReceiveEmailAddress' && !stristr($sEmailLink, SystemConfig::getValue("sToEmailAddress")))
+      $sEmailLink .= $sMailtoDelimiter . SystemConfig::getValue("sToEmailAddress");
     $sEmailLink = urlencode($sEmailLink);  // Mailto should comply with RFC 2368
 
     if ($bEmailMailto) { // Does user have permission to email groups
@@ -122,7 +123,7 @@ require "../Include/Header.php";
         <div class="box box-info text-center user-profile-2">
           <div class="user-profile-inner">
             <h4 class="white"><?= $teacher['per_FirstName'] . " " . $teacher['per_LastName'] ?></h4>
-            <img src="<?=$sRootPath?>/api/persons/<?= $teacher['per_ID'] ?>/photo" class="img-circle profile-avatar"
+            <img src="<?= $sRootPath ?>/api/persons/<?= $teacher['per_ID'] ?>/photo" class="img-circle profile-avatar"
                  alt="User avatar" width="80" height="80">
             <a href="mailto:<?= $teacher['per_Email'] ?>" type="button" class="btn btn-primary btn-sm btn-block"><i
                 class="fa fa-envelope"></i> <?= gettext("Send Message") ?></a>
@@ -184,7 +185,7 @@ require "../Include/Header.php";
   </div>
   <!-- /.box-header -->
   <div class="box-body table-responsive">
-    <table id="sundayschool" class="table table-striped table-bordered" cellspacing="0" width="100%">
+    <table id="sundayschool" class="table table-striped table-bordered data-table" cellspacing="0" width="100%">
       <thead>
       <tr>
         <th><?= gettext("Name") ?></th>
@@ -206,14 +207,14 @@ require "../Include/Header.php";
       <?php
 
       foreach ($thisClassChildren as $child) {
-        $birthDate = "";
-        if ($child['birthYear'] != "") {
-          $birthDate = $child['birthMonth'] . "/" . $child['birthDay'] . "/" . $child['birthYear'];
-        }
+        $hideAge = $child['flags'] == 1 || $child['birthYear'] == "" || $child['birthYear'] == "0";
+        $birthDate = FormatBirthDate($child['birthYear'], $child['birthMonth'], $child['birthDay'], '-', $child['flags']);
+        $birthDateDate = BirthDate($child['birthYear'], $child['birthMonth'], $child['birthDay'], $hideAge);
+
         echo "<tr>";
-        echo "<td><img src='" . $sRootPath."/api/persons/". $child['kidId']. "/photo' hight='30' width='30' > <a href='../PersonView.php?PersonID=" . $child['kidId'] . "'>" . $child['firstName'] . ", " . $child['LastName'] . "</a></td>";
+        echo "<td><img src='" . $sRootPath . "/api/persons/" . $child['kidId'] . "/photo' hight='30' width='30' > <a href='../PersonView.php?PersonID=" . $child['kidId'] . "'>" . $child['firstName'] . ", " . $child['LastName'] . "</a></td>";
         echo "<td>" . $birthDate . "</td>";
-        echo "<td>" . FormatAge($child['birthMonth'], $child['birthDay'], $child['birthYear'], "") . "</td>";
+        echo "<td data-birth-date='" . ($hideAge ? '' : $birthDateDate->format("Y-m-d")) . "'></td>";
         echo "<td>" . $child['kidEmail'] . "</td>";
         echo "<td>" . $child['mobilePhone'] . "</td>";
         echo "<td>" . $child['homePhone'] . "</td>";
@@ -316,13 +317,16 @@ function implodeUnique($array, $withQuotes)
 
 <script type="text/javascript" charset="utf-8">
   $(document).ready(function () {
-    $('#sundayschool').dataTable({
+    $('.data-table').dataTable({
       "dom": 'T<"clear">lfrtip',
+      responsive: true,
+      "language": {
+        "url": window.CRM.root + "/skin/locale/datatables/" + window.CRM.locale + ".json"
+      },
       "tableTools": {
         "sSwfPath": "//cdn.datatables.net/tabletools/2.2.3/swf/copy_csv_xls_pdf.swf"
       }
     });
-
     // turn the element to select2 select style
     $('.email-recepients-kids').select2({
       placeholder: 'Enter recepients',
@@ -410,8 +414,7 @@ function implodeUnique($array, $withQuotes)
   }
 
 </script>
-
-
+<script src="<?= $sRootPath ?>/skin/js/ShowAge.js"></script>
 <?php
 require "../Include/Footer.php";
 ?>

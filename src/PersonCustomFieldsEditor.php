@@ -42,10 +42,10 @@ require "Include/Header.php"; ?>
     // Fill in the other needed custom field data arrays not gathered from the form submit
     $sSQL = "SELECT * FROM person_custom_master ORDER BY custom_Order";
     $rsCustomFields = RunQuery($sSQL);
-    $numRows = mysql_num_rows($rsCustomFields);
+    $numRows = mysqli_num_rows($rsCustomFields);
 
     for ($row = 1; $row <= $numRows; $row++) {
-      $aRow = mysql_fetch_array($rsCustomFields, MYSQL_BOTH);
+      $aRow = mysqli_fetch_array($rsCustomFields, MYSQLI_BOTH);
       extract($aRow);
 
       $aFieldFields[$row] = $custom_Field;
@@ -114,7 +114,7 @@ require "Include/Header.php"; ?>
       } else {
         $sSQL = "SELECT custom_Name FROM person_custom_master";
         $rsCustomNames = RunQuery($sSQL);
-        while ($aRow = mysql_fetch_array($rsCustomNames)) {
+        while ($aRow = mysqli_fetch_array($rsCustomNames)) {
           if ($aRow[0] == $newFieldName) {
             $bDuplicateNameError = true;
             break;
@@ -124,12 +124,14 @@ require "Include/Header.php"; ?>
         if (!$bDuplicateNameError) {
           // Find the highest existing field number in the table to determine the next free one.
           // This is essentially an auto-incrementing system where deleted numbers are not re-used.
-          $fields = mysql_list_fields($sDATABASE, "person_custom", $cnInfoCentral);
-          $last = mysql_num_fields($fields) - 1;
+          $fields = mysqli_query($cnInfoCentral, "SHOW COLUMNS FROM person_custom");
+          $last = mysqli_num_fields($fields) - 1;
 
           // Set the new field number based on the highest existing.  Chop off the "c" at the beginning of the old one's name.
           // The "c#" naming scheme is necessary because MySQL 3.23 doesn't allow numeric-only field (table column) names.
-          $newFieldNum = substr(mysql_field_name($fields, $last), 1) + 1;
+          $fields = mysqli_query($cnInfoCentral, "SELECT * FROM person_custom");
+          $fieldInfo = mysqli_fetch_field_direct($fields, $last);
+          $newFieldNum = substr($fieldInfo->name, 1) + 1;
 
           if ($newFieldSide == 0)
             $newFieldSide = 'left';
@@ -140,7 +142,7 @@ require "Include/Header.php"; ?>
           if ($newFieldType == 12) {
             // Get the first available lst_ID for insertion.  lst_ID 0-9 are reserved for permanent lists.
             $sSQL = "SELECT MAX(lst_ID) FROM list_lst";
-            $aTemp = mysql_fetch_array(RunQuery($sSQL));
+            $aTemp = mysqli_fetch_array(RunQuery($sSQL));
             if ($aTemp[0] > 9)
               $newListID = $aTemp[0] + 1;
             else
@@ -214,11 +216,11 @@ require "Include/Header.php"; ?>
     $sSQL = "SELECT * FROM person_custom_master ORDER BY custom_Order";
 
     $rsCustomFields = RunQuery($sSQL);
-    $numRows = mysql_num_rows($rsCustomFields);
+    $numRows = mysqli_num_rows($rsCustomFields);
 
     // Create arrays of the fields.
     for ($row = 1; $row <= $numRows; $row++) {
-      $aRow = mysql_fetch_array($rsCustomFields, MYSQL_BOTH);
+      $aRow = mysqli_fetch_array($rsCustomFields, MYSQLI_BOTH);
       extract($aRow);
 
       $aNameFields[$row] = $custom_Name;
@@ -235,7 +237,7 @@ require "Include/Header.php"; ?>
   $aSecurityType = array();
 
   $aSecurityGrp = Array();
-  while ($aRow = mysql_fetch_array($rsSecurityGrp)) {
+  while ($aRow = mysqli_fetch_array($rsSecurityGrp)) {
     $aSecurityGrp[] = $aRow;
     extract($aRow);
     $aSecurityType[$lst_OptionID] = $lst_OptionName;
@@ -265,7 +267,7 @@ require "Include/Header.php"; ?>
   <script language="javascript">
 
     function confirmDeleteField(event) {
-      var answer = confirm('<?= gettext("Warning:  By deleting this field, you will irrevokably lose all person data assigned for this field!") ?>')
+      var answer = confirm("<?= gettext("Warning:  By deleting this field, you will irrevokably lose all person data assigned for this field!") ?>")
       if (answer) {
         window.location = href = "PersonCustomFieldsRowOps.php?Field=" + event + "&Action=delete"
         return true;
@@ -321,7 +323,7 @@ require "Include/Header.php"; ?>
                      maxlength="40">
               <?php
               if (array_key_exists($row, $aNameErrors) && $aNameErrors[$row])
-                echo "<span style=\"color: red;\"><BR>" . gettext("You must enter a name.") . " </span>";
+                echo "<span style=\"color: red;\"><BR>" . gettext("You must enter a name") . " </span>";
               ?>
             </td>
             <td class="TextColumn" align="center">
@@ -333,7 +335,7 @@ require "Include/Header.php"; ?>
                 $sSQL = "SELECT grp_ID,grp_Name FROM group_grp ORDER BY grp_Name";
                 $rsGroupList = RunQuery($sSQL);
 
-                while ($aRow = mysql_fetch_array($rsGroupList)) {
+                while ($aRow = mysqli_fetch_array($rsGroupList)) {
                   extract($aRow);
 
                   echo "<option value=\"" . $grp_ID . "\"";
@@ -368,7 +370,7 @@ require "Include/Header.php"; ?>
                      value="1" <?php if ($aSideFields[$row]) echo " checked" ?>><?= gettext("Right") ?>
             </td>
             <td>
-              <input type="button" class="btn btn-danger" value="<?= gettext("delete") ?>" name="delete"
+              <input type="button" class="btn btn-danger" value="<?= gettext("Delete") ?>" name="delete"
                      onclick="return confirmDeleteField(<?= "'" . $aFieldFields[$row] . "'" ?>);" )">
             </td>
             <td class="TextColumn" width="5%" nowrap>
@@ -410,7 +412,7 @@ require "Include/Header.php"; ?>
             <tr>
               <td width="15%"></td>
               <td valign="top">
-                <div><?= gettext("Type:") ?></div>
+                <div><?= gettext("Type") ?>:</div>
                 <?php
                 echo "<select name=\"newFieldType\">";
 
@@ -423,7 +425,7 @@ require "Include/Header.php"; ?>
                 <a href="http://docs.churchcrm.io/"><?= gettext("Help on types..") ?></a>
               </td>
               <td valign="top">
-                <div><?= gettext("Name:") ?></div>
+                <div><?= gettext("Name") ?>:</div>
                 <input type="text" name="newFieldName" size="30" maxlength="40">
                 <?php
                 if ($bNewNameError) echo "<div><span style=\"color: red;\"><BR>" . gettext("You must enter a name") . "</span></div>";
@@ -432,7 +434,7 @@ require "Include/Header.php"; ?>
                 &nbsp;
               </td>
               <td valign="top" nowrap>
-                <div><?= gettext("Side:") ?></div>
+                <div><?= gettext("Side") ?>:</div>
                 <input type="radio" name="newFieldSide" value="0" checked><?= gettext("Left") ?>
                 <input type="radio" name="newFieldSide" value="1"><?= gettext("Right") ?>
                 &nbsp;

@@ -61,13 +61,14 @@ else if (isset($_POST["DepositSlipRunTransactions"])) {
 }
 
 $_SESSION['iCurrentDeposit'] = $iDepositSlipID;  // Probably redundant
-$sSQL = "UPDATE user_usr SET usr_currentDeposit = '$iDepositSlipID' WHERE usr_per_id = \"" . $_SESSION['iUserID'] . "\"";
-$rsUpdate = RunQuery($sSQL);
+
+/* @var $currentUser \ChurchCRM\User */
+$currentUser = $_SESSION['user'];
+$currentUser->setCurrentDeposit($iDepositSlipID);
+$currentUser->save();
 
 require "Include/Header.php";
 ?>
-<script src="<?= $sRootPath ?>/skin/adminlte/plugins/chartjs/Chart.min.js"></script>
-
 <div class="row">
   <div class="col-lg-7">
     <div class="box">
@@ -78,8 +79,8 @@ require "Include/Header.php";
         <form method="post" action="#" name="DepositSlipEditor" id="DepositSlipEditor">
           <div class="row">
             <div class="col-lg-4">
-              <label for="Date"><?php echo gettext("Date:"); ?></label>
-              <input type="text" class="form-control" name="Date" value="<?php echo $thisDeposit->getDate('Y-m-d'); ?>" id="DepositDate" >
+              <label for="Date"><?= gettext("Date"); ?>:</label>
+              <input type="text" class="form-control date-picker" name="Date" value="<?php echo $thisDeposit->getDate('Y-m-d'); ?>" id="DepositDate" >
             </div>
             <div class="col-lg-4">
               <label for="Comment"><?php echo gettext("Comment:"); ?></label>
@@ -131,7 +132,7 @@ require "Include/Header.php";
           <?php
           foreach ($thisDeposit->getFundTotals() as $fund)
           {
-            echo "<li><b>". $fund->Name . "</b>: $" . $fund->Total."</li>";
+            echo "<li><b>". $fund['Name'] . "</b>: $" . $fund['Total'] ."</li>";
           }
           ?>
         </div>
@@ -206,8 +207,8 @@ require "Include/Header.php";
     $fund = new StdClass();
     $fund->color = "#".random_color() ;
     $fund->highlight= "#".random_color() ;
-    $fund->label = $tmpfund->Name;
-    $fund->value = $tmpfund->Total;
+    $fund->label = $tmpfund['Name'];
+    $fund->value = $tmpfund['Total'];
     array_push($fundData,$fund);
   }
   $pledgeTypeData = array();
@@ -229,9 +230,9 @@ require "Include/Header.php";
   var depositType = '<?php echo $thisDeposit->getType(); ?>';
   var depositSlipID = <?php echo $iDepositSlipID; ?>;
   var isDepositClosed = Boolean(<?=  $thisDeposit->getClosed();  ?>);
-  var fundData = <?= json_encode($fundData) ?>; 
+  var fundData = <?= json_encode($fundData) ?>;
   var pledgeData = <?= json_encode($pledgeTypeData) ?>;
-  
+
   $(document).ready(function() {
     initPaymentTable();
     initCharts(pledgeData, fundData);

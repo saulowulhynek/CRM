@@ -1,8 +1,8 @@
 <?php
 
 if (file_exists ( 'Include/Config.php')) {
-  header("Location: index.php" );
-} 
+ header("Location: index.php" );
+}
 
 if (isset($_POST["Setup"])) {
   $template = file_get_contents("Include/Config.php.example");
@@ -17,10 +17,22 @@ if (isset($_POST["Setup"])) {
   exit();
 }
 
+if (isset($_GET['SystemIntegrityCheck']))
+{
+require_once 'Service/SystemService.php';  // don't depend on autoloader here, just in case validation doesn't pass.
+$systemService = new \ChurchCRM\Service\SystemService();
+$AppIntegrity = $systemService->verifyApplicationIntegrity();
+echo $AppIntegrity['status'];
+exit();
+}
+
+
+
+
 $temp = $_SERVER['REQUEST_URI'];
-$rootPath = "/" . str_replace("/Setup.php", "", $temp);
-if ($rootPath = "/") {
-  $rootPath = "";
+$sRootPath = str_replace("/Setup.php", "", $temp);
+if ($sRootPath == "/") {
+  $sRootPath = "";
 }
 $URL = 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' . $_SERVER['HTTP_HOST'] . "/";
 
@@ -36,8 +48,12 @@ $required = array(
   'GD Library for image manipulation' => (extension_loaded('gd') && function_exists('gd_info')),
   'FileInfo Extension for image manipulation' => extension_loaded('fileinfo'),
   'cURL' => function_exists('curl_version'),
-  'locale/gettext' => function_exists('bindtextdomain')
+  'locale/gettext' => function_exists('bindtextdomain'),
+  'Include file is writeable' => is_writable("Include/Config.php.example"),
+  'ChurchCRM File Integrity Check' => FALSE
 );
+
+
 
 if (!function_exists('bindtextdomain')) {
   function gettext($string){
@@ -76,9 +92,26 @@ require("Include/HeaderNotLoggedIn.php");
 ?>
 <script>
 $("document").ready(function(){
-$("#dangerContinue").click(function(){
-  $("#setupPage").css("display","");
-})
+    $("#dangerContinue").click(function(){
+      $("#setupPage").css("display","");
+    });
+    $.ajax({
+        url: "<?= $sRootPath ?>/Setup.php?SystemIntegrityCheck=1",
+        method: "GET"
+    }).done(function(data){
+        if (data == "success" ) 
+        {
+            $("#ChurchCRMFileIntegrityCheck-status").removeClass("text-red");
+            $("#ChurchCRMFileIntegrityCheck-status").addClass("text-blue");
+            $("#ChurchCRMFileIntegrityCheck-status").html("&check;")
+        }
+        else
+        {
+            $("#ChurchCRMFileIntegrityCheck-status").html("&#x2717;");
+        }
+       
+    });
+    $("#ChurchCRMFileIntegrityCheck-status").html('<i class="fa fa-spinner fa-spin"></i>');
 });
 </script>
 <div class='container'>
@@ -105,7 +138,7 @@ $("#dangerContinue").click(function(){
               <tr>
                 <td><?php echo $label ?></td>
                 <td
-                  class="<?php echo ($passed) ? 'text-blue' : 'text-red' ?>"><?php echo ($passed) ? '&check;' : '&#x2717;' ?></td>
+                  id="<?php echo preg_replace('/\s+/', '', $label) ?>-status" class="<?php echo ($passed) ? 'text-blue' : 'text-red' ?>"><?php echo ($passed) ? '&check;' : '&#x2717;' ?></td>
               </tr>
             <?php endforeach ?>
           </table>
@@ -130,7 +163,7 @@ $("#dangerContinue").click(function(){
       </div>
        <?php if (!$is_ready) { echo '<button class="btn btn-warning" id="dangerContinue">I know what I\'m doing.  Install ChurchCRM Anyway</button>'; } ?>
     </div>
-      <div id="setupPage" class="col-lg-6"  <?php if (!$is_ready) { echo 'style="display:none"'; } ?>> 
+      <div id="setupPage" class="col-lg-6"  <?php if (!$is_ready) { echo 'style="display:none"'; } ?>>
         <div class="box">
           <div class="box-body">
             <form target="_self" method="post">
@@ -138,31 +171,31 @@ $("#dangerContinue").click(function(){
 
                 <div class="row">
                   <div class="col-md-4">
-                    <label for="DB_SERVER_NAME"><?= gettext("DB Server Name:") ?></label>
+                    <label for="DB_SERVER_NAME"><?= gettext("DB Server Name") ?>:</label>
                     <input type="text" name="DB_SERVER_NAME" id="DB_SERVER_NAME" value="localhost" class="form-control"
                            required>
                   </div>
                   <div class="col-md-4">
-                    <label for="DB_NAME"><?= gettext("DB Name:") ?></label>
+                    <label for="DB_NAME"><?= gettext("DB Name") ?>:</label>
                     <input type="text" name="DB_NAME" id="DB_NAME" value="churchcrm" class="form-control" required>
                   </div>
                   <div class="col-md-4">
-                    <label for="DB_USER"><?= gettext("DB User:") ?></label>
+                    <label for="DB_USER"><?= gettext("DB User") ?>:</label>
                     <input type="text" name="DB_USER" id="DB_USER" value="churchcrm" class="form-control" required>
                   </div>
                   <div class="col-md-4">
-                    <label for="DB_PASSWORD"><?= gettext("DB Password:") ?></label>
+                    <label for="DB_PASSWORD"><?= gettext("DB Password") ?>:</label>
                     <input type="password" name="DB_PASSWORD" id="DB_PASSWORD" value="churchcrm" class="form-control"
                            required>
                   </div>
 
                   <div class="col-md-4">
-                    <label for="ROOT_PATH"><?= gettext("Root Path:") ?></label>
-                    <input type="text" name="ROOT_PATH" id="ROOT_PATH" value="<?= $rootPath ?>" class="form-control">
+                    <label for="ROOT_PATH"><?= gettext("Root Path") ?>:</label>
+                    <input type="text" name="ROOT_PATH" id="ROOT_PATH" value="<?= $sRootPath ?>" class="form-control">
                   </div>
 
                   <div class="col-md-4">
-                    <label for="URL"><?= gettext("Base URL:") ?></label>
+                    <label for="URL"><?= gettext("Base URL") ?>:</label>
                     <input type="text" name="URL" id="URL" value="<?= $URL ?>" class="form-control" required>
                   </div>
                 </div>
@@ -172,6 +205,8 @@ $("#dangerContinue").click(function(){
           </div>
         </div>
       </div>
+  </div>
+</div>
     <?php
     require("Include/FooterNotLoggedIn.php");
     ?>

@@ -49,7 +49,7 @@ if (isset($_POST["Submit"]) && count($_SESSION['aPeopleCart']) > 0) {
 		{
 			$sSQL = "SELECT * FROM person_per WHERE per_ID = " . $iPersonAddress;
 			$rsPerson = RunQuery($sSQL);
-			extract(mysql_fetch_array($rsPerson));
+			extract(mysqli_fetch_array($rsPerson));
 		}
 
 		SelectWhichAddress($sAddress1, $sAddress2, FilterInput($_POST["Address1"]), FilterInput($_POST["Address2"]), $per_Address1, $per_Address2, false);
@@ -88,7 +88,7 @@ if (isset($_POST["Submit"]) && count($_SESSION['aPeopleCart']) > 0) {
 			//Get the key back
 			$sSQL = "SELECT MAX(fam_ID) AS iFamilyID FROM family_fam";
 			$rsLastEntry = RunQuery($sSQL);
-			extract(mysql_fetch_array($rsLastEntry));
+			extract(mysqli_fetch_array($rsLastEntry));
 		}
 	}
 
@@ -101,7 +101,7 @@ if (isset($_POST["Submit"]) && count($_SESSION['aPeopleCart']) > 0) {
 			$iPersonID = $_SESSION['aPeopleCart'][$element[key]];
 			$sSQL = "SELECT per_fam_ID FROM person_per WHERE per_ID = " . $iPersonID;
 			$rsPerson = RunQuery($sSQL);
-			extract(mysql_fetch_array($rsPerson));
+			extract(mysqli_fetch_array($rsPerson));
 
 			// Make sure they are not already in a family
 			if ($per_fam_ID == 0)
@@ -142,7 +142,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	$rsFamilyRoles = RunQuery($sSQL);
 
 	$sRoleOptionsHTML = "";
-	while($aRow = mysql_fetch_array($rsFamilyRoles))
+	while($aRow = mysqli_fetch_array($rsFamilyRoles))
 	{
 		extract($aRow);
 		$sRoleOptionsHTML .= "<option value=\"" . $lst_OptionID . "\">" . $lst_OptionName . "</option>";
@@ -160,7 +160,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	echo "<td align=\"center\"><b>" . gettext("Assign Role") . "</b></td>";
 
 	$count = 1;
-	while ($aRow = mysql_fetch_array($rsCartItems))
+	while ($aRow = mysqli_fetch_array($rsCartItems))
 	{
 		$sRowClass = AlternateRowStyle($sRowClass);
 
@@ -185,13 +185,13 @@ if (count($_SESSION['aPeopleCart']) > 0)
     <div class="box">
 <table align="center" class="table table-responsive">
 	<tr>
-		<td class="LabelColumn"><?= gettext("Add to Family:") ?></td>
+		<td class="LabelColumn"><?= gettext("Add to Family") ?>:</td>
 		<td class="TextColumn">
 			<?php
 			// Create the family select drop-down
 			echo "<select name=\"FamilyID\">";
 			echo "<option value=\"0\">" . gettext("Create new family") . "</option>";
-			while ($aRow = mysql_fetch_array($rsFamilies)) {
+			while ($aRow = mysqli_fetch_array($rsFamilies)) {
 				extract($aRow);
 				echo "<option value=\"" . $fam_ID . "\">" . $fam_Name . "</option>";
 			}
@@ -207,24 +207,24 @@ if (count($_SESSION['aPeopleCart']) > 0)
 
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Family Name:") ?></td>
+		<td class="LabelColumn"><?= gettext("Family Name") ?>:</td>
 		<td class="TextColumnWithBottomBorder"><input type="text" Name="FamilyName" value="<?= $sName ?>" maxlength="48"><font color="red"><?= $sNameError ?></font></td>
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Wedding Date:") ?></td>
-		<td class="TextColumnWithBottomBorder"><input type="text" Name="WeddingDate" value="<?= $dWeddingDate ?>" maxlength="10" id="sel1" size="15"  class="form-control pull-right active"><font color="red"><?php echo "<BR>" . $sWeddingDateError ?></font></td>
+        <td class="LabelColumn"><?= gettext("Wedding Date") ?>:</td>
+		<td class="TextColumnWithBottomBorder"><input type="text" Name="WeddingDate" value="<?= $dWeddingDate ?>" maxlength="10" id="sel1" size="15"  class="form-control pull-right active date-picker"><font color="red"><?php echo "<BR>" . $sWeddingDateError ?></font></td>
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Use address/contact data from:") ?></td>
+		<td class="LabelColumn"><?= gettext("Use address/contact data from") ?>:</td>
 		<td class="TextColumn">
 			<?php
 			echo "<select name=\"PersonAddress\">";
 			echo "<option value=\"0\">" . gettext("Only the new data below") . "</option>";
 
-			mysql_data_seek($rsCartItems,0);
-			while ($aRow = mysql_fetch_array($rsCartItems)) {
+			mysqli_data_seek($rsCartItems,0);
+			while ($aRow = mysqli_fetch_array($rsCartItems)) {
 				extract($aRow);
 				if ($per_fam_ID == 0)
 					echo "<option value=\"" . $per_ID . "\">" . $per_FirstName . ' ' . $per_LastName . "</option>";
@@ -236,22 +236,22 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Address1:") ?></td>
+		<td class="LabelColumn"><?= gettext("Address") ?> 1:</td>
 		<td class="TextColumn"><input type="text" Name="Address1" value="<?= $sAddress1 ?>" size="50" maxlength="250"></td>
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Address2:") ?></td>
+		<td class="LabelColumn"><?= gettext("Address") ?> 2:</td>
 		<td class="TextColumn"><input type="text" Name="Address2" value="<?= $sAddress2 ?>" size="50" maxlength="250"></td>
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("City:") ?></td>
+		<td class="LabelColumn"><?= gettext("City") ?>:</td>
 		<td class="TextColumn"><input type="text" Name="City" value="<?= $sCity ?>" maxlength="50"></td>
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("State:") ?></td>
+		<td class="LabelColumn"><?= gettext("State") ?>:</td>
 		<td class="TextColumn">
 			<?php require "Include/StateDropDown.php"; ?>
 			OR
@@ -264,9 +264,9 @@ if (count($_SESSION['aPeopleCart']) > 0)
 		<td class="LabelColumn">
 			<?php
 			if($sCountry == "Canada")
-			  echo gettext("Postal Code:");
+			  echo gettext("Postal Code").":";
 			else
-			  echo gettext("Zip:");
+			  echo gettext("Zip").":";
 			?>
 		</td>
 		<td class="TextColumn">
@@ -276,7 +276,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Country:") ?></td>
+		<td class="LabelColumn"><?= gettext("Country") ?>:</td>
 		<td class="TextColumnWithBottomBorder">
 			<?php require "Include/CountryDropDown.php" ?>
 		</td>
@@ -287,7 +287,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Home Phone:") ?></td>
+		<td class="LabelColumn"><?= gettext("Home Phone") ?>:</td>
 		<td class="TextColumn">
 			<input type="text" Name="HomePhone" value="<?= $sHomePhone ?>" size="30" maxlength="30">
 			<input type="checkbox" name="NoFormat_HomePhone" value="1" <?php if ($bNoFormat_HomePhone) echo " checked";?>><?= gettext("Do not auto-format") ?>
@@ -295,7 +295,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Work Phone:") ?></td>
+		<td class="LabelColumn"><?= gettext("Work Phone") ?>:</td>
 		<td class="TextColumn">
 			<input type="text" name="WorkPhone" value="<?php echo $sWorkPhone ?>" size="30" maxlength="30">
 			<input type="checkbox" name="NoFormat_WorkPhone" value="1" <?php if ($bNoFormat_WorkPhone) echo " checked";?>><?= gettext("Do not auto-format") ?>
@@ -303,7 +303,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Mobile Phone:") ?></td>
+		<td class="LabelColumn"><?= gettext("Mobile Phone") ?>:</td>
 		<td class="TextColumn">
 			<input type="text" name="CellPhone" value="<?php echo $sCellPhone ?>" size="30" maxlength="30">
 			<input type="checkbox" name="NoFormat_CellPhone" value="1" <?php if ($bNoFormat_CellPhone) echo " checked";?>><?= gettext("Do not auto-format") ?>
@@ -311,7 +311,7 @@ if (count($_SESSION['aPeopleCart']) > 0)
 	</tr>
 
 	<tr>
-		<td class="LabelColumn"><?= gettext("Email:") ?></td>
+		<td class="LabelColumn"><?= gettext("Email") ?>:</td>
 		<td class="TextColumnWithBottomBorder"><input type="text" Name="Email" value="<?= $sEmail ?>" size="30" maxlength="50"></td>
 	</tr>
 
@@ -329,7 +329,4 @@ else
 	echo "<p align=\"center\" class='callout callout-warning'>" . gettext("Your cart is empty!") . "</p>";
 ?>
 </div>
-<script>
-$("#sel1").datepicker({format:'yyyy-mm-dd'});
-</script>
 <?php require "Include/Footer.php"; ?>

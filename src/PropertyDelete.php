@@ -45,14 +45,14 @@ if (isset($_GET["Confirmed"]))
 //Get the family record in question
 $sSQL = "SELECT * FROM property_pro WHERE pro_ID = " . $iPropertyID;
 $rsProperty = RunQuery($sSQL);
-extract(mysql_fetch_array($rsProperty));
+extract(mysqli_fetch_array($rsProperty));
 
 require "Include/Header.php";
 
 ?>
 
 <p>
-	<?= gettext("Please confirm deletion of this property:") ?>
+	<?= gettext("Please confirm deletion of this property") ?>:
 </p>
 
 <p class="ShadedBox">

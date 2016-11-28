@@ -31,7 +31,7 @@ require "Include/GeoCoder.php";
 use ChurchCRM\Service\MailChimpService;
 use ChurchCRM\Service\FamilyService;
 use ChurchCRM\Service\TimelineService;
-
+use ChurchCRM\dto\SystemConfig;
 use ChurchCRM\FamilyQuery;
 
 $timelineService = new TimelineService();
@@ -60,7 +60,7 @@ $dResults = RunQuery($dSQL);
 $last_id = 0;
 $next_id = 0;
 $capture_next = 0;
-while ($myrow = mysql_fetch_row($dResults)) {
+while ($myrow = mysqli_fetch_row($dResults)) {
   $fid = $myrow[0];
   if ($capture_next == 1) {
     $next_id = $fid;
@@ -81,7 +81,7 @@ $sSQL = "SELECT *, a.per_FirstName AS EnteredFirstName, a.Per_LastName AS Entere
 		LEFT JOIN person_per b ON fam_EditedBy = b.per_ID
 		WHERE fam_ID = " . $iFamilyID;
 $rsFamily = RunQuery($sSQL);
-extract(mysql_fetch_array($rsFamily));
+extract(mysqli_fetch_array($rsFamily));
 
 if ($iFamilyID == $fam_ID) {
 
@@ -92,7 +92,7 @@ if ($iFamilyID == $fam_ID) {
 // Get the custom field data for this person.
   $sSQL = "SELECT * FROM family_custom WHERE fam_ID = " . $iFamilyID;
   $rsFamCustomData = RunQuery($sSQL);
-  $aFamCustomData = mysql_fetch_array($rsFamCustomData, MYSQL_BOTH);
+  $aFamCustomData = mysqli_fetch_array($rsFamCustomData, MYSQLI_BOTH);
 
   $family = FamilyQuery::create()->findPk($iFamilyID);
 
@@ -138,7 +138,7 @@ if ($iFamilyID == $fam_ID) {
   $sSQL = "SELECT * FROM list_lst WHERE lst_ID = 5 ORDER BY lst_OptionSequence";
   $rsSecurityGrp = RunQuery($sSQL);
 
-  while ($aRow = mysql_fetch_array($rsSecurityGrp)) {
+  while ($aRow = mysqli_fetch_array($rsSecurityGrp)) {
     extract($aRow);
     $aSecurityType[$lst_OptionID] = $lst_OptionName;
   }
@@ -169,17 +169,17 @@ if ($iFamilyID == $fam_ID) {
           <?php } ?>
           <hr/>
           <ul class="fa-ul">
-            <li><i class="fa-li glyphicon glyphicon-home"></i>Address: <span>
+            <li><i class="fa-li glyphicon glyphicon-home"></i><?= gettext("Address") ?>:<span>
 					<a
             href="http://maps.google.com/?q=<?= getMailingAddress($fam_Address1, $fam_Address2, $fam_City, $fam_State, $fam_Zip, $fam_Country) ?>"
             target="_blank"><?php
             echo getMailingAddress($fam_Address1, $fam_Address2, $fam_City, $fam_State, $fam_Zip, $fam_Country);
             echo "</a></span><br>";
             if ($fam_Latitude && $fam_Longitude) {
-              if ($nChurchLatitude && $nChurchLongitude) {
-                $sDistance = LatLonDistance($nChurchLatitude, $nChurchLongitude, $fam_Latitude, $fam_Longitude);
-                $sDirection = LatLonBearing($nChurchLatitude, $nChurchLongitude, $fam_Latitude, $fam_Longitude);
-                echo $sDistance . " " . strtolower($sDistanceUnit) . " " . $sDirection . " " . gettext(" of church<br>");
+              if (SystemConfig::getValue("nChurchLatitude") && SystemConfig::getValue("nChurchLongitude")) {
+                $sDistance = LatLonDistance(SystemConfig::getValue("nChurchLatitude"), SystemConfig::getValue("nChurchLongitude"), $fam_Latitude, $fam_Longitude);
+                $sDirection = LatLonBearing(SystemConfig::getValue("nChurchLatitude"), SystemConfig::getValue("nChurchLongitude"), $fam_Latitude, $fam_Longitude);
+                echo $sDistance . " " . strtolower(SystemConfig::getValue("sDistanceUnit")) . " " . $sDirection . " " . gettext(" of church<br>");
               }
             }   else {
               $bHideLatLon = true;
@@ -189,38 +189,38 @@ if ($iFamilyID == $fam_ID) {
               <li><i class="fa-li fa fa-compass"></i><?= gettext("Latitude/Longitude") ?>
                 <span><?= $fam_Latitude . " / " . $fam_Longitude ?></span></li>
             <?php }
-            if (!$bHideFamilyNewsletter) { /* Newsletter can be hidden - General Settings */ ?>
-              <li><i class="fa-li fa fa-hacker-news"></i><?= gettext("Send newsletter:") ?>
+            if (!SystemConfig::getValue("bHideFamilyNewsletter")) { /* Newsletter can be hidden - General Settings */ ?>
+              <li><i class="fa-li fa fa-hacker-news"></i><?= gettext("Send Newsletter") ?>:
                 <span><?= gettext($fam_SendNewsLetter) ?></span></li>
             <?php }
-            if (!$bHideWeddingDate && $fam_WeddingDate != "") { /* Wedding Date can be hidden - General Settings */ ?>
-              <li><i class="fa-li fa fa-magic"></i><?= gettext("Wedding Date:") ?>
+            if (!SystemConfig::getValue("bHideWeddingDate") && $fam_WeddingDate != "") { /* Wedding Date can be hidden - General Settings */ ?>
+              <li><i class="fa-li fa fa-magic"></i><?= gettext("Wedding Date") ?>:
                 <span><?= FormatDate($fam_WeddingDate, false) ?></span></li>
             <?php }
-            if ($bUseDonationEnvelopes) { ?>
+            if (SystemConfig::getValue("bUseDonationEnvelopes")) { ?>
               <li><i class="fa-li fa fa-phone"></i><?= gettext("Envelope Number") ?> <span><?= $fam_Envelope ?></span>
               </li>
             <?php }
             if ($sHomePhone != "") { ?>
-              <li><i class="fa-li fa fa-phone"></i><?= gettext("Home Phone:") ?> <span><a href="tel:<?= $sHomePhone ?>"><?= $sHomePhone ?></a></span></li>
+              <li><i class="fa-li fa fa-phone"></i><?= gettext("Home Phone") ?>: <span><a href="tel:<?= $sHomePhone ?>"><?= $sHomePhone ?></a></span></li>
             <?php }
             if ($sWorkPhone != "") { ?>
-              <li><i class="fa-li fa fa-building"></i><?= gettext("Work Phone:") ?> <span><a href="tel:<?= $sWorkPhone ?>"><?= $sWorkPhone ?></a></span></li>
+              <li><i class="fa-li fa fa-building"></i><?= gettext("Work Phone") ?>: <span><a href="tel:<?= $sWorkPhone ?>"><?= $sWorkPhone ?></a></span></li>
             <?php }
             if ($sCellPhone != "") { ?>
-              <li><i class="fa-li fa fa-mobile"></i><?= gettext("Mobile Phone:") ?> <span><a href="tel:<?= $sCellPhone ?>"><?= $sCellPhone ?></a></span></li>
+              <li><i class="fa-li fa fa-mobile"></i><?= gettext("Mobile Phone") ?>: <span><a href="tel:<?= $sCellPhone ?>"><?= $sCellPhone ?></a></span></li>
             <?php }
             if ($fam_Email != "") { ?>
-            <li><i class="fa-li fa fa-envelope"></i><?= gettext("Email:") ?><a href="mailto:<?= $fam_Email ?>">
+            <li><i class="fa-li fa fa-envelope"></i><?= gettext("Email") ?>:<a href="mailto:<?= $fam_Email ?>">
                 <span><?= $fam_Email ?></span></a></li>
             <?php if ($mailchimp->isActive()) { ?>
-            <li><i class="fa-li glyphicon glyphicon-send"></i><?= gettext("Email:") ?>
+            <li><i class="fa-li glyphicon glyphicon-send"></i><?= gettext("Email") ?>:
               <span><?= $mailchimp->isEmailInMailChimp($fam_Email) ?></span>
           </a></li>
             <?php }
             }
             // Display the left-side custom fields
-            while ($Row = mysql_fetch_array($rsFamCustomFields)) {
+            while ($Row = mysqli_fetch_array($rsFamCustomFields)) {
               extract($Row);
               if (($aSecurityType[$fam_custom_FieldSec] == 'bAll') || ($_SESSION[$aSecurityType[$fam_custom_FieldSec]])) {
                 $currentData = trim($aFamCustomData[$fam_custom_Field]);
@@ -312,7 +312,8 @@ if ($iFamilyID == $fam_ID) {
                     <span class='label <?= $labelColor ?>'> <?= $famRole ?></span>
                   </td>
                   <td>
-                    <?= $person->getBirthDate() ?>
+                    <?= FormatBirthDate($person->getBirthYear(),
+                      $person->getBirthMonth(), $person->getBirthDay(), "-", $person->getFlags()) ?>
                   </td>
                   <td>
                     <?php $tmpEmail = $person->getEmail();
@@ -431,7 +432,7 @@ if ($iFamilyID == $fam_ID) {
                 <?php
                 $sAssignedProperties = ",";
 
-                if (mysql_num_rows($rsAssignedProperties) == 0) { ?>
+                if (mysqli_num_rows($rsAssignedProperties) == 0) { ?>
                   <br>
                   <div class="alert alert-warning">
                     <i class="fa fa-question-circle fa-fw fa-lg"></i>
@@ -456,7 +457,7 @@ if ($iFamilyID == $fam_ID) {
                   $bIsFirst = true;
 
                   //Loop through the rows
-                  while ($aRow = mysql_fetch_array($rsAssignedProperties)) {
+                  while ($aRow = mysqli_fetch_array($rsAssignedProperties)) {
                     $pro_Prompt = "";
                     $r2p_Value = "";
 
@@ -506,14 +507,14 @@ if ($iFamilyID == $fam_ID) {
                 if ($bOkToEdit) { ?>
                   <div class="alert alert-info">
                     <div>
-                      <h4><strong><?= gettext("Assign a New Property:") ?></strong></h4>
+                      <h4><strong><?= gettext("Assign a New Property") ?>:</strong></h4>
 
                       <p><br></p>
 
                       <form method="post" action="PropertyAssign.php?FamilyID=<?= $iFamilyID ?>">
                         <select name="PropertyID">
                           <?php
-                          while ($aRow = mysql_fetch_array($rsProperties)) {
+                          while ($aRow = mysqli_fetch_array($rsProperties)) {
                             extract($aRow);
                             //If the property doesn't already exist for this Person, write the <OPTION> tag
                             if (strlen(strstr($sAssignedProperties, "," . $pro_ID . ",")) == 0) {
@@ -536,7 +537,7 @@ if ($iFamilyID == $fam_ID) {
           <div role="tab-pane fade" class="tab-pane" id="finance">
             <div class="main-box clearfix">
               <div class="main-box-body clearfix">
-                <?php if (mysql_num_rows($rsAutoPayments) > 0) { ?>
+                <?php if (mysqli_num_rows($rsAutoPayments) > 0) { ?>
                   <table cellpadding="5" cellspacing="0" width="100%">
 
                     <tr class="TableHeader">
@@ -556,7 +557,7 @@ if ($iFamilyID == $fam_ID) {
                     $tog = 0;
 
                     //Loop through all automatic payments
-                    while ($aRow = mysql_fetch_array($rsAutoPayments)) {
+                    while ($aRow = mysqli_fetch_array($rsAutoPayments)) {
                       $tog = (!$tog);
 
                       extract($aRow);
@@ -625,9 +626,15 @@ if ($iFamilyID == $fam_ID) {
                          value="1" <?php if ($_SESSION['sshowPledges']) echo " checked"; ?>><?= gettext("Show Pledges") ?>
                   <input type="checkbox" name="ShowPayments"
                          value="1" <?php if ($_SESSION['sshowPayments']) echo " checked"; ?>><?= gettext("Show Payments") ?>
-                  <?= gettext(" Since:") ?>
-                  <input type="text" class="TextColumnWithBottomBorder" Name="ShowSinceDate"
-                         value="<?= $_SESSION['sshowSince'] ?>" maxlength="10" id="ShowSinceDate" size="15">
+                  <label for="ShowSinceDate"><?= gettext("Since") ?>:</label>
+                  <?php
+                        $showSince = "";
+                        if ($_SESSION['sshowSince'] != null) {
+                          $showSince = $_SESSION['sshowSince']->format('Y-m-d');
+                        }
+                  ?>
+                  <input type="text" class="date-picker" Name="ShowSinceDate"
+                         value="<?= $showSince ?>" maxlength="10" id="ShowSinceDate" size="15">
                   <input type="submit" class="btn" <?= 'value="' . gettext("Update") . '"' ?> name="UpdatePledgeTable"
                          style="font-size: 8pt;">
                 </form>
@@ -657,7 +664,7 @@ if ($iFamilyID == $fam_ID) {
 
                   if ($_SESSION['sshowPledges'] || $_SESSION['sshowPayments']) {
                     //Loop through all pledges
-                    while ($aRow = mysql_fetch_array($rsPledges)) {
+                    while ($aRow = mysqli_fetch_array($rsPledges)) {
                       $tog = (!$tog);
 
                       $plg_FYID = "";
@@ -784,7 +791,7 @@ if ($iFamilyID == $fam_ID) {
           </div>
           <div class="modal-body">
             <input type="file" name="file" size="50"/>
-            <?= gettext("Max Photo size:") ?> <?= ini_get('upload_max_filesize') ?>
+            <?= gettext("Max Photo size") ?>: <?= ini_get('upload_max_filesize') ?>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal"><?= gettext("Close") ?></button>
@@ -852,9 +859,6 @@ if ($iFamilyID == $fam_ID) {
     </div>
   </div>
 
-  <script>
-    $("#ShowSinceDate").datepicker({format: 'yyyy-mm-dd'});
-  </script>
 <?php } else { ?>
   <div class="error-page">
     <h2 class="headline text-yellow">404</h2>

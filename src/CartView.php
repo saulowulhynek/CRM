@@ -30,6 +30,8 @@ require "Include/Config.php";
 require "Include/Functions.php";
 require "Include/LabelFunctions.php";
 
+use ChurchCRM\dto\SystemConfig;
+
 if (isset($_POST["rmEmail"]))
 {
      rmEmail();
@@ -60,7 +62,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
         $rsClassification = RunQuery($sClassSQL);
         unset($aClassificationName);
         $aClassificationName[0] = "Unassigned";
-        while ($aRow = mysql_fetch_array($rsClassification))
+        while ($aRow = mysqli_fetch_array($rsClassification))
         {
             extract($aRow);
             $aClassificationName[intval($lst_OptionID)]=$lst_OptionName;
@@ -71,7 +73,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
         $rsFamilyRole = RunQuery($sFamRoleSQL);
         unset($aFamilyRoleName);
         $aFamilyRoleName[0] = "Unassigned";
-        while ($aRow = mysql_fetch_array($rsFamilyRole))
+        while ($aRow = mysqli_fetch_array($rsFamilyRole))
         {
             extract($aRow);
             $aFamilyRoleName[intval($lst_OptionID)]=$lst_OptionName;
@@ -80,10 +82,10 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 
         $sSQL = "SELECT * FROM person_per LEFT JOIN family_fam ON person_per.per_fam_ID = family_fam.fam_ID WHERE per_ID IN (" . ConvertCartToString($_SESSION['aPeopleCart']) . ") ORDER BY per_LastName";
         $rsCartItems = RunQuery($sSQL);
-        $iNumPersons = mysql_num_rows($rsCartItems);
+        $iNumPersons = mysqli_num_rows($rsCartItems);
 
         $sSQL = "SELECT distinct per_fam_ID FROM person_per LEFT JOIN family_fam ON person_per.per_fam_ID = family_fam.fam_ID WHERE per_ID IN (" . ConvertCartToString($_SESSION['aPeopleCart']) . ") ORDER BY per_fam_ID";
-        $iNumFamilies = mysql_num_rows(RunQuery($sSQL));
+        $iNumFamilies = mysqli_num_rows(RunQuery($sSQL));
 
         if ($iNumPersons > 16) { ?>
         <form method="get" action="CartView.php#GenerateLabels">
@@ -91,10 +93,10 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
         value="<?= gettext("Go To Labels") ?>">
         </form>
         <?php } ?>
-                    
-     <!-- BEGIN CART FUNCTIONS -->          
-     
-     
+
+     <!-- BEGIN CART FUNCTIONS -->
+
+
 <?php if (count($_SESSION['aPeopleCart']) > 0) { ?>
 <div class="box">
     <div class="box-header with-border">
@@ -115,7 +117,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
         <?php } ?>
         <a href="MapUsingGoogle.php?GroupID=0" class="btn btn-app"><i class="fa fa-map-marker"></i><?= gettext("Map Cart") ?></a>
         <a href="Reports/NameTags.php?labeltype=74536&labelfont=times&labelfontsize=36" class="btn btn-app"><i class="fa fa-file-pdf-o"></i><?= gettext("Name Tags") ?></a>
-        <?
+        <?php
         if (count($_SESSION['aPeopleCart']) != 0) {
 
 
@@ -129,7 +131,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
                     WHERE per_ID NOT IN (SELECT per_ID FROM person_per INNER JOIN record2property_r2p ON r2p_record_ID = per_ID INNER JOIN property_pro ON r2p_pro_ID = pro_ID AND pro_Name = 'Do Not Email') AND per_ID IN (" . ConvertCartToString($_SESSION['aPeopleCart']) . ")";
             $rsEmailList = RunQuery($sSQL);
             $sEmailLink = '';
-            while (list ($per_Email, $fam_Email) = mysql_fetch_row($rsEmailList))
+            while (list ($per_Email, $fam_Email) = mysqli_fetch_row($rsEmailList))
             {
                 $sEmail = SelectWhichInfo($per_Email, $fam_Email, False);
                 if ($sEmail)
@@ -144,9 +146,9 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             if ($sEmailLink)
             {
                 // Add default email if default email has been set and is not already in string
-                if ($sToEmailAddress != '' && $sToEmailAddress != 'myReceiveEmailAddress'
-                                           && !stristr($sEmailLink, $sToEmailAddress))
-                    $sEmailLink .= $sMailtoDelimiter . $sToEmailAddress;
+                if (SystemConfig::getValue("sToEmailAddress") != '' && SystemConfig::getValue("sToEmailAddress") != 'myReceiveEmailAddress'
+                                           && !stristr($sEmailLink, SystemConfig::getValue("sToEmailAddress")))
+                    $sEmailLink .= $sMailtoDelimiter . SystemConfig::getValue("sToEmailAddress");
                 $sEmailLink = urlencode($sEmailLink);  // Mailto should comply with RFC 2368
 
                 if ($bEmailMailto) { // Does user have permission to email groups
@@ -162,7 +164,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             $sPhoneLink = "";
             $sCommaDelimiter = ', ';
 
-            while (list ($per_CellPhone, $fam_CellPhone) = mysql_fetch_row($rsPhoneList))
+            while (list ($per_CellPhone, $fam_CellPhone) = mysqli_fetch_row($rsPhoneList))
             {
                 $sPhone = SelectWhichInfo($per_CellPhone, $fam_CellPhone, False);
                 if ($sPhone)
@@ -246,7 +248,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
                 StartRowStartColumn();
                 IgnoreIncompleteAddresses();
                 LabelFileType();
-                ?>                             
+                ?>
 
                 <tr>
                         <td></td>
@@ -259,19 +261,19 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 
 
 <?php
-    if (($bEmailSend) && ($bSendPHPMail)) {
+    if ((SystemConfig::getValue("bEmailSend")) && ($bSendPHPMail)) {
         if (isset($email_array)) {
             $bcc_list = "";
             foreach ($email_array as $email_address) {
                 // Add all address except the default
                 // avoid sending to this address twice
-                if ($email_address != $sToEmailAddress) {
+                if ($email_address != SystemConfig::getValue("sToEmailAddress")) {
                     $bcc_list .= $email_address . ", ";
                 }
             }
-            if ($sToEmailAddress) {
+            if (SystemConfig::getValue("sToEmailAddress")) {
                 // append $sToEmailAddress
-                $bcc_list .= $sToEmailAddress;
+                $bcc_list .= SystemConfig::getValue("sToEmailAddress");
             } else {
                 // remove the last ", "
                 $bcc_list = substr($bcc_list, 0, strlen($bcc_list) - 2 );
@@ -282,23 +284,23 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 
         ?><div align="center"><table class="table"><tr><td align="center"><?php
         echo "<br><h2>" . gettext("Send Email To People in Cart") . "</h2>";
- 
+
         // Check if there are pending emails that have not been delivered
         // A user cannot send a new email until the previous email has been sent
-    
+
         $sSQL  = "SELECT COUNT(emp_usr_id) as countjobs "
                . "FROM email_message_pending_emp "
                . "WHERE emp_usr_id='".$_SESSION['iUserID']."'";
 
         $rsPendingEmail = RunQuery($sSQL);
-        $aRow = mysql_fetch_array($rsPendingEmail);
+        $aRow = mysqli_fetch_array($rsPendingEmail);
         extract($aRow);
 
         $sSQL  = "SELECT COUNT(erp_usr_id) as countrecipients "
                . "FROM email_recipient_pending_erp "
                . "WHERE erp_usr_id='".$_SESSION['iUserID']."'";
         $rsCountRecipients = RunQuery($sSQL);
-        $aRow = mysql_fetch_array($rsCountRecipients);
+        $aRow = mysqli_fetch_array($rsCountRecipients);
         extract($aRow);
 
         if ($countjobs) {
@@ -308,7 +310,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
                   . "WHERE emp_usr_id='".$_SESSION['iUserID']."'";
 
             $rsPendingEmail = RunQuery($sSQL);
-            $aRow = mysql_fetch_array($rsPendingEmail);
+            $aRow = mysqli_fetch_array($rsPendingEmail);
             extract($aRow);
 
             if ($emp_to_send == 0 && $countrecipients == 0) {
@@ -331,13 +333,13 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 	        		$hasAttach = 1;
                 	move_uploaded_file ($_FILES['Attach']['tmp_name'], "tmp_attach/".$attachName);
 		        }
-                
+
                 if (strlen($sEmailSubject.$sEmailMessage)) {
 
-                    // User has edited a message.  Update MySQL.                
+                    // User has edited a message.  Update MySQL.
                     $sSQLu = "UPDATE email_message_pending_emp ".
-                             "SET emp_subject='".mysql_real_escape_string($sEmailSubject)."',".
-                             "    emp_message='".mysql_real_escape_string($sEmailMessage)."', ".
+                             "SET emp_subject='".mysqli_real_escape_string($cnInfoCentral, $sEmailSubject)."',".
+                             "    emp_message='".mysqli_real_escape_string($cnInfoCentral, $sEmailMessage)."', ".
                              "    emp_attach_name='".$attachName."',".
                              "    emp_attach='".$hasAttach."' ".
                              "WHERE emp_usr_id='".$_SESSION['iUserID']."'";
@@ -349,7 +351,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
                     // Retrieve subject and message from MySQL
 
                     $rsPendingEmail = RunQuery($sSQL);
-                    $aRow = mysql_fetch_array($rsPendingEmail);
+                    $aRow = mysqli_fetch_array($rsPendingEmail);
                     extract($aRow);
 
                     $sEmailSubject = $emp_subject;
@@ -357,9 +359,9 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
                     $attachName = $emp_attach_name;
                 }
 
-                $sEmailForm = "sendoredit";                
+                $sEmailForm = "sendoredit";
 
-            } else { 
+            } else {
                 // This job has already started.  The user may not change the message
                 // or the distribution once emails have actually been sent.
                 $sEmailForm = 'resumeorabort';
@@ -373,11 +375,11 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 			$sEmailMessage = "";
 			$hasAttach = 0;
 			$attachName = "";
-        	
+
 			if (array_key_exists ('emailsubject', $_POST))
 	            $sEmailSubject = stripslashes($_POST['emailsubject']);
 			if (array_key_exists ('emailmessage', $_POST))
-	            $sEmailMessage = stripslashes($_POST['emailmessage']);	            
+	            $sEmailMessage = stripslashes($_POST['emailmessage']);
             if (array_key_exists ('Attach', $_FILES)) {
 	        	$attachName = $_FILES['Attach']['name'];
 	        	$hasAttach = 1;
@@ -387,13 +389,13 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             if (strlen($sEmailSubject.$sEmailMessage)) {
 
                 // User has written a message.  Store it in MySQL.
-                // Since this is the first time use INSERT instead of UPDATE                
+                // Since this is the first time use INSERT instead of UPDATE
                 $sSQL = "INSERT INTO email_message_pending_emp ".
-                        "SET " . 
+                        "SET " .
                             "emp_usr_id='" .$_SESSION['iUserID']. "',".
                             "emp_to_send='0'," .
-                            "emp_subject='" . mysql_real_escape_string($sEmailSubject). "',".
-                            "emp_message='" . mysql_real_escape_string($sEmailMessage). "',".
+                            "emp_subject='" . mysqli_real_escape_string($cnInfoCentral, $sEmailSubject). "',".
+                            "emp_message='" . mysqli_real_escape_string($cnInfoCentral, $sEmailMessage). "',".
                             "emp_attach_name='" .$attachName . "',".
                 			"emp_attach='".$hasAttach."'";
 
@@ -416,18 +418,18 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             foreach ($email_array as $email_address) {
                 // Add all address except the default
                 // avoid sending to this address twice
-                if ($email_address != $sToEmailAddress) {
+                if ($email_address != SystemConfig::getValue("sToEmailAddress")) {
                     echo '<input type="hidden" name="emaillist[]" value="' .
                                                             $email_address . '">';
                 }
             }
-            if ($sToEmailAddress) { // The default address gets the last email
-            echo '<input type="hidden" name="emaillist[]" value="'.$sToEmailAddress.'">'."\n";
+            if (SystemConfig::getValue("sToEmailAddress")) { // The default address gets the last email
+            echo '<input type="hidden" name="emaillist[]" value="'.SystemConfig::getValue("sToEmailAddress").'">'."\n";
             }
 
             echo '<input type="submit" class="btn" name="submit" '.
                  'value ="'.gettext("Compose Email").'">'."\n</form>";
-            
+
         } elseif ($sEmailForm == 'sendoredit') {
 
             //Print the From, To, and Email List with the Subject and Message
@@ -440,7 +442,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             echo '<b>'.gettext("To (blind):").'</b> '.$bcc_list.'<br>'."\n";
 
             echo '<b>'.gettext("Subject:").'</b> '.htmlspecialchars($sEmailSubject).'<br>';
-            
+
             if (strlen ($attachName) > 0) {
             	echo '<b>'.gettext("Attach file:").'</b> '.htmlspecialchars($attachName).'<br>';
             }
@@ -456,13 +458,13 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             foreach ($email_array as $email_address) {
                 // Add all address except the default
                 // avoid sending to this address twice
-                if ($email_address != $sToEmailAddress) {
+                if ($email_address != SystemConfig::getValue("sToEmailAddress")) {
                     echo '<input type="hidden" name="emaillist[]" value="' .
                                                             $email_address . '">';
                 }
             }
-            if ($sToEmailAddress) {  // The default address gets the last email
-            echo '<input type="hidden" name="emaillist[]" value="'.$sToEmailAddress.'">'."\n";
+            if (SystemConfig::getValue("sToEmailAddress")) {  // The default address gets the last email
+            echo '<input type="hidden" name="emaillist[]" value="'.SystemConfig::getValue("sToEmailAddress").'">'."\n";
             }
 
             echo '<input type="hidden" name="mysql" value="true">'."\n";
@@ -478,13 +480,13 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
             foreach ($email_array as $email_address) {
                 // Add all address except the default
                 // avoid sending to this address twice
-                if ($email_address != $sToEmailAddress) {
+                if ($email_address != SystemConfig::getValue("sToEmailAddress")) {
                     echo '<input type="hidden" name="emaillist[]" value="' .
                                                             $email_address . '">';
                 }
             }
-            if ($sToEmailAddress) { // The default address gets the last email
-            echo '<input type="hidden" name="emaillist[]" value="'.$sToEmailAddress.'">'."\n";
+            if (SystemConfig::getValue("sToEmailAddress")) { // The default address gets the last email
+            echo '<input type="hidden" name="emaillist[]" value="'.SystemConfig::getValue("sToEmailAddress").'">'."\n";
             }
 
             echo '<input type="hidden" name="mysql" value="true">'."\n";
@@ -558,15 +560,15 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
                     'ORDER BY ejl_id';
 
             $rsEJL = RunQuery($sSQL, FALSE); // FALSE means do not stop on error
-            $sError = mysql_error();
+            $sError = mysqli_error($cnInfoCentral);
 
             if ($sError) {
                 echo '<br>'.$sError;
                 echo '<br>'.$sSQL;
 
             } else {
-                $sHTMLLog = '<br><br><div align="center"><table>';            
-                while ($aRow = mysql_fetch_array($rsEJL)) {
+                $sHTMLLog = '<br><br><div align="center"><table>';
+                while ($aRow = mysqli_fetch_array($rsEJL)) {
                     extract($aRow);
 
                     $sTime = date('i:s', intval($ejl_time)).'.';
@@ -586,10 +588,10 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 
 
 ?>
-                    
-                    
+
+
     <!-- END CART FUNCTIONS -->
-                    
+
 <!-- BEGIN CART LISTING -->
 <div class="box box-primary">
     <div class="box-header with-border">
@@ -599,8 +601,8 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
         <table class="table table-hover">
         <tr>
             <th><?= gettext("Name") ?></th>
-            <th><?=  gettext("Address?") ?></th>
-            <th><?=  gettext("Email?") ?></th>
+            <th><?=  gettext("Address") ?>?</th>
+            <th><?=  gettext("Email") ?>?</th>
             <th><?= gettext("Remove") ?></th>
             <th><?=  gettext("Classification") ?></th>
             <th><?=  gettext("Family Role") ?></th>
@@ -611,7 +613,7 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
         $sRowClass = "RowColorA";
         $email_array = array ();
 
-        while ($aRow = mysql_fetch_array($rsCartItems))
+        while ($aRow = mysqli_fetch_array($rsCartItems))
         {
                 $sRowClass = AlternateRowStyle($sRowClass);
 
@@ -619,15 +621,15 @@ if (array_key_exists('aPeopleCart', $_SESSION) && count($_SESSION['aPeopleCart']
 
                 $sEmail = SelectWhichInfo($per_Email, $fam_Email, False);
                 if (strlen($sEmail) == 0 && strlen ($per_WorkEmail) > 0) {
-                	$sEmail = $per_WorkEmail;                	
+                	$sEmail = $per_WorkEmail;
                 }
-                
+
                 if (strlen($sEmail)) {
                     $sValidEmail = gettext("Yes");
                     if (!stristr($sEmailLink, $sEmail)) {
                         $email_array[] = $sEmail;
 
-                        if ($iEmailNum == 0) {       
+                        if ($iEmailNum == 0) {
                         	// Comma is not needed before first email address
                             $sEmailLink .= $sEmail;
                             $iEmailNum++;

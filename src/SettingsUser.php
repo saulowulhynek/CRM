@@ -98,7 +98,7 @@ $rsConfigs = RunQuery($sSQL);
 <?
 $r = 1;
 // List Individual Settings
-while (list($ucfg_per_id, $ucfg_id, $ucfg_name, $ucfg_value, $ucfg_type, $ucfg_tooltip, $ucfg_permission) = mysql_fetch_row($rsConfigs)) {
+while (list($ucfg_per_id, $ucfg_id, $ucfg_name, $ucfg_value, $ucfg_type, $ucfg_tooltip, $ucfg_permission) = mysqli_fetch_row($rsConfigs)) {
 	
 	// Cancel, Save Buttons every 13 rows
 	if ($r == 13) {
@@ -120,8 +120,8 @@ while (list($ucfg_per_id, $ucfg_id, $ucfg_name, $ucfg_value, $ucfg_type, $ucfg_t
 		$sel2 = "";
 	}	
 	echo "<tr><td class=\"TextColumnWithBottomBorder\"><select name=\"new_permission[$ucfg_id]\">";
-	echo "<option value=\"FALSE\" $sel1>False";
-	echo "<option value=\"TRUE\" $sel2>True
+	echo "<option value=\"FALSE\" $sel1>".gettext('False');
+	echo "<option value=\"TRUE\" $sel2>".gettext('True')."
                         </select></td>";
 
 	
@@ -151,14 +151,14 @@ while (list($ucfg_per_id, $ucfg_id, $ucfg_name, $ucfg_value, $ucfg_type, $ucfg_t
 		}	
 		echo "<td class=\"TextColumnWithBottomBorder\">
                 <select name=\"new_value[$ucfg_id]\">
-                <option value=\"\" $sel1>False
-                <option value=\"1\" $sel2>True
+                <option value=\"\" $sel1>".gettext('False')."
+                <option value=\"1\" $sel2>".gettext('True')."
                 </select></td>";
 	}
 		
 	// Notes
 	echo "<td><input type=hidden name=\"type[$ucfg_id]\" value=\"$ucfg_type\">
-        $ucfg_tooltip</td></tr>";
+        ".gettext($ucfg_tooltip)."</td></tr>";
 
 
 	$r++;

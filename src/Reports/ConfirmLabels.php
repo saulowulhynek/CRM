@@ -15,22 +15,13 @@
 require "../Include/Config.php";
 require "../Include/Functions.php";
 require "../Include/ReportFunctions.php";
-use ChurchCRM\Reports\ChurchInfoReport;
-require "../Include/class_fpdf_labels.php";
 
-class PDF_ConfirmLabels extends PDF_Label {
-
-	// Constructor
-	function PDF_ConfirmLabels($sLabelFormat) {
-   	parent::PDF_Label ($sLabelFormat);
-      
-	}
-}
+use ChurchCRM\Reports\PDF_Label;
 
 $sLabelFormat = FilterInput($_GET["labeltype"]);
 setcookie("labeltype", $sLabelFormat, time()+60*60*24*90, "/" );
 
-$pdf = new PDF_ConfirmLabels($sLabelFormat);
+$pdf = new PDF_Label($sLabelFormat);
 
 $sFontInfo = FontFromName($_GET["labelfont"]);
 setcookie("labelfont", $_GET["labelfont"], time()+60*60*24*90, "/" );
@@ -44,7 +35,7 @@ $sSQL = "SELECT * FROM family_fam WHERE 1 ORDER BY fam_Name";
 $rsFamilies = RunQuery($sSQL);
 
 // Loop through families
-while ($aFam = mysql_fetch_array($rsFamilies)) {
+while ($aFam = mysqli_fetch_array($rsFamilies)) {
 	extract ($aFam);
 
    $labelStr = $pdf->MakeSalutation ($fam_ID);
@@ -65,5 +56,5 @@ header('Pragma: public');  // Needed for IE when using a shared SSL certificate
 if ($iPDFOutputType == 1)
 	$pdf->Output("ConfirmDataLabels" . date("Ymd") . ".pdf", "D");
 else
-	$pdf->Output();	
+	$pdf->Output();
 ?>

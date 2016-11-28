@@ -55,8 +55,8 @@
     ],
     "dbVersion": "2.2.0"
   },
-  "pre-2.2.1" : {
-    "versions" : [
+  "pre-2.3.0" : {
+    "versions": [
       "2.2.0",
       "2.2.1",
       "2.2.2",
@@ -64,7 +64,31 @@
       "2.2.4"
     ],
     "scripts": [
+      "/mysql/upgrade/2.3.0.sql"
     ],
-    "dbVersion":"2.2.5"
+    "dbVersion": "2.3.0"
+  },
+  "pre-2.3.5" : {
+    "versions": [
+      "2.3.0",
+      "2.3.1",
+      "2.3.2",
+      "2.3.3",
+      "2.3.4"
+    ],
+    "scripts": [
+
+    ],
+    "dbVersion": "2.3.5"
+  },
+  "pre-2.4.0" : {
+    "versions": [
+      "2.3.5"
+    ],
+    "scripts": [
+      "/mysql/upgrade/2.4.0/2.4.0-Country.sql",
+      "/mysql/upgrade/2.4.0/2.4.0-user.sql"
+    ],
+    "dbVersion": "2.4.0"
   }
 }

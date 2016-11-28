@@ -2,9 +2,10 @@
 
 namespace ChurchCRM\Service;
 
+use ChurchCRM\EventAttendQuery;
+use ChurchCRM\Note;
 use ChurchCRM\NoteQuery;
 use ChurchCRM\PersonQuery;
-use ChurchCRM\EventAttendQuery;
 
 
 class TimelineService
@@ -41,17 +42,8 @@ class TimelineService
     return $sortedTimeline;
   }
 
-  function getForPerson($personID)
-  {
+  private function eventsForPerson($personID) {
     $timeline = array();
-    $personNotes = NoteQuery::create()->findByPerId($personID);
-    foreach ($personNotes as $dbNote) {
-      $item = $this->noteToTimelineItem($dbNote);
-      if (!is_null($item)) {
-        $timeline[$item["key"]] = $item;
-      }
-    }
-
     $eventsByPerson = EventAttendQuery::create()->findByPersonId($personID);
     foreach ($eventsByPerson as $personEvent) {
       $event = $personEvent->getEvent();
@@ -59,7 +51,26 @@ class TimelineService
         $event->getDesc(), "", "");
       $timeline[$item["key"]] = $item;
     }
+    return $timeline;
+  }
 
+  private function notesForPerson($personID, $noteType) {
+    $timeline = array();
+    $personQuery = NoteQuery::create()
+      ->filterByPerId($personID);
+    if($noteType != null) {
+      $personQuery->filterByType($noteType);
+    }
+    foreach ($personQuery->find() as $dbNote) {
+      $item = $this->noteToTimelineItem($dbNote);
+      if (!is_null($item)) {
+        $timeline[$item["key"]] = $item;
+      }
+    }
+    return $timeline;
+  }
+
+  private function sortTimeline($timeline) {
     krsort($timeline);
 
     $sortedTimeline = array();
@@ -70,18 +81,40 @@ class TimelineService
     return $sortedTimeline;
   }
 
+  function getNotesForPerson($personID) {
+    $timeline = $this->notesForPerson($personID, 'note');
+    return $this->sortTimeline($timeline);
+  }
 
+  function getForPerson($personID)
+  {
+    $timeline = array_merge(
+      $this->notesForPerson($personID, null),
+      $this->eventsForPerson($personID)
+    );
+
+    return $this->sortTimeline($timeline);
+  }
+
+  /**
+   * @param $dbNote Note
+   * @return mixed|null
+   */
   function noteToTimelineItem($dbNote)
   {
     $item = NULL;
     if ($this->currentUserIsAdmin || $dbNote->isVisable($this->currentUser)) {
-      $displayEditedBy = "unknown?";
-      $editor = PersonQuery::create()->findPk($dbNote->getDisplayEditedBy());
-      if ($editor != null) {
-        $displayEditedBy = $editor->getFullName();
+      $displayEditedBy = gettext("Unknown");
+      if ($dbNote->getDisplayEditedBy() == -1) {
+        $displayEditedBy = gettext("Self Registration");
+      } else {
+        $editor = PersonQuery::create()->findPk($dbNote->getDisplayEditedBy());
+        if ($editor != null) {
+          $displayEditedBy = $editor->getFullName();
+        }
       }
       $item = $this->createTimeLineItem($dbNote->getType(), $dbNote->getDisplayEditedDate(),
-        "by " . $displayEditedBy, "", $dbNote->getText(),
+        gettext("by") . " " . $displayEditedBy, "", $dbNote->getText(),
         $dbNote->getEditLink($this->baseURL), $dbNote->getDeleteLink($this->baseURL));
 
     }

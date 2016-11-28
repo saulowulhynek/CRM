@@ -25,6 +25,7 @@ require 'Include/Config.php';
 require 'Include/Functions.php';
 
 use ChurchCRM\ListOptionQuery;
+use ChurchCRM\dto\SystemConfig;
 
 //Get the GroupID out of the querystring
 $iGroupID = FilterInput($_GET['GroupID'], 'int');
@@ -36,7 +37,7 @@ if (array_key_exists('Action', $_GET) && $_GET['Action'] == 'AddGroupToCart') {
   $rsGroupMembers = RunQuery($sSQL);
 
   //Loop through the recordset
-  while ($aRow = mysql_fetch_array($rsGroupMembers)) {
+  while ($aRow = mysqli_fetch_array($rsGroupMembers)) {
     extract($aRow);
 
     //Add each person to the cart
@@ -74,7 +75,7 @@ $rsProperties = RunQuery($sSQL);
 // Get data for the form as it now exists..
 $sSQL = 'SELECT * FROM groupprop_master WHERE grp_ID = ' . $iGroupID . ' ORDER BY prop_ID';
 $rsPropList = RunQuery($sSQL);
-$numRows = mysql_num_rows($rsPropList);
+$numRows = mysqli_num_rows($rsPropList);
 
 //Set the page title
 $sPageTitle = gettext('Group View') . " : " . $thisGroup->getName();
@@ -104,7 +105,7 @@ require 'Include/Header.php';
             </div>
             <div class="modal-body">
               <span style="color: red">
-                <?= gettext("Please confirm deletion of this group record:") ?>
+                <?= gettext("Please confirm deletion of this group record") ?>:
 
                 <p class="ShadedBox">
                   <?= $thisGroup->getName() ?>
@@ -135,7 +136,7 @@ require 'Include/Header.php';
               <h4 class="modal-title" id="upload-Image-label"><?= gettext("Change Member Role") ?></h4>
             </div>
             <div class="modal-body">
-              <span style="color: red"><?= gettext("Please select target role for member:") ?></span>
+              <span style="color: red"><?= gettext("Please select target role for member") ?>:</span>
               <input type="hidden" id="changingMemberID">
               <p class="ShadedBox" id="changingMemberName"></p>
               <select name="newRoleSelection" id="newRoleSelection">
@@ -149,7 +150,7 @@ require 'Include/Header.php';
         </div>
       </div>
       <!--END MEMBER ROLE MODAL-->
-      
+
       <!-- TARGET GROP SELECT MODAL-->
       <div class="modal fade" id="selectTargetGroupModal" tabindex="-1" role="dialog" aria-labelledby="deleteGroup" aria-hidden="true">
         <div class="modal-dialog">
@@ -160,7 +161,7 @@ require 'Include/Header.php';
             </div>
             <div class="modal-body">
               <input type="hidden" id="targetGroupAction">
-              <span style="color: red"><?= gettext("Please select target group for members:") ?></span>
+              <span style="color: red"><?= gettext("Please select target group for members") ?>:</span>
               <select name="targetGroupSelection" id="targetGroupSelection" style="width: 50%">
               </select>
             </div>
@@ -180,7 +181,6 @@ require 'Include/Header.php';
       }
     }
     echo '<a class="btn btn-app" href="GroupView.php?Action=AddGroupToCart&amp;GroupID=' . $thisGroup->getId() . '"><i class="fa fa-users"></i>' . gettext("Add Group Members to Cart") . '</a>';
-    echo '<a class="btn btn-app" href="GroupMeeting.php?GroupID=' . $thisGroup->getId() . '&amp;Name=' . $thisGroup->getName() . '&amp;linkBack=GroupView.php?GroupID=' . $thisGroup->getId() . '"><i class="fa fa-calendar-o"></i>' . gettext('Schedule a meeting') . '</a>';
 
     echo '<a class="btn btn-app" href="MapUsingGoogle.php?GroupID=' . $thisGroup->getId() . '"><i class="fa fa-map-marker"></i>' . gettext("Map this group") . '</a>';
 
@@ -200,7 +200,7 @@ require 'Include/Header.php';
             AND p2g2r_grp_ID = " . $iGroupID;
     $rsEmailList = RunQuery($sSQL);
     $sEmailLink = '';
-    while (list ($per_Email, $fam_Email, $virt_RoleName) = mysql_fetch_row($rsEmailList)) {
+    while (list ($per_Email, $fam_Email, $virt_RoleName) = mysqli_fetch_row($rsEmailList)) {
       $sEmail = SelectWhichInfo($per_Email, $fam_Email, False);
       if ($sEmail) {
         /* if ($sEmailLink) // Don't put delimiter before first email
@@ -214,8 +214,8 @@ require 'Include/Header.php';
     }
     if ($sEmailLink) {
       // Add default email if default email has been set and is not already in string
-      if ($sToEmailAddress != '' && $sToEmailAddress != 'myReceiveEmailAddress' && !stristr($sEmailLink, $sToEmailAddress))
-        $sEmailLink .= $sMailtoDelimiter . $sToEmailAddress;
+      if (SystemConfig::getValue("sToEmailAddress") != '' && SystemConfig::getValue("sToEmailAddress") != 'myReceiveEmailAddress' && !stristr($sEmailLink, SystemConfig::getValue("sToEmailAddress")))
+        $sEmailLink .= $sMailtoDelimiter . SystemConfig::getValue("sToEmailAddress");
       $sEmailLink = urlencode($sEmailLink);  // Mailto should comply with RFC 2368
 
       if ($bEmailMailto) { // Does user have permission to email groups
@@ -262,7 +262,7 @@ require 'Include/Header.php';
     $rsPhoneList = RunQuery($sSQL);
     $sPhoneLink = '';
     $sCommaDelimiter = ', ';
-    while (list ($per_CellPhone, $fam_CellPhone) = mysql_fetch_row($rsPhoneList)) {
+    while (list ($per_CellPhone, $fam_CellPhone) = mysqli_fetch_row($rsPhoneList)) {
       $sPhone = SelectWhichInfo($per_CellPhone, $fam_CellPhone, False);
       if ($sPhone) {
         /* if ($sPhoneLink) // Don't put delimiter before first phone
@@ -275,8 +275,8 @@ require 'Include/Header.php';
     if ($sPhoneLink) {
       if ($bEmailMailto) { // Does user have permission to email groups
         // Display link
-        echo '<a class="btn btn-app" href="javascript:void(0)" onclick="allPhonesCommaD()"><i class="fa fa-mobile-phone"></i> Text Group</a>';
-        echo '<script>function allPhonesCommaD() {prompt("Press CTRL + C to copy all group members\' phone numbers", "' . mb_substr($sPhoneLink, 0, -2) . '")};</script>';
+        echo '<a class="btn btn-app" href="javascript:void(0)" onclick="allPhonesCommaD()"><i class="fa fa-mobile-phone"></i>' . gettext("Text Group") . '</a>';
+        echo '<script>function allPhonesCommaD() {prompt("' . gettext("Press CTRL + C to copy all group members\' phone numbers") . '", "' . mb_substr($sPhoneLink, 0, -2) . '")};</script>';
       }
     }
     ?>
@@ -324,7 +324,7 @@ require 'Include/Header.php';
             // Create arrays of the properties.
             for ($row = 1; $row <= $numRows; $row++)
             {
-              $aRow = mysql_fetch_array($rsPropList, MYSQL_BOTH);
+              $aRow = mysqli_fetch_array($rsPropList, MYSQLI_BOTH);
               extract($aRow);
 
               $aNameFields[$row] = $prop_Name;
@@ -369,7 +369,7 @@ require 'Include/Header.php';
             $sAssignedProperties = ',';
 
             //Was anything returned?
-            if (mysql_num_rows($rsAssignedProperties) == 0) {
+            if (mysqli_num_rows($rsAssignedProperties) == 0) {
               // No, indicate nothing returned
               echo '<p align="center">' . gettext('No property assignments.') . '</p>';
             }
@@ -392,7 +392,7 @@ require 'Include/Header.php';
                   $bIsFirst = true;
 
                   //Loop through the rows
-                  while ($aRow = mysql_fetch_array($rsAssignedProperties)) {
+                  while ($aRow = mysqli_fetch_array($rsAssignedProperties)) {
                     $pro_Prompt = '';
                     $r2p_Value = '';
 
@@ -449,7 +449,7 @@ require 'Include/Header.php';
                   echo '<span>' . gettext('Assign a New Property:') . '</span>';
                   echo '<select name="PropertyID">';
 
-                  while ($aRow = mysql_fetch_array($rsProperties)) {
+                  while ($aRow = mysqli_fetch_array($rsProperties)) {
                     extract($aRow);
 
                     //If the property doesn't already exist for this Person, write the <OPTION> tag
@@ -474,6 +474,7 @@ require 'Include/Header.php';
             </table>
             </div>
             </div>
+
             <div class="box">
               <div class="box-header with-border">
                 <h3 class="box-title"><?= gettext('Group Members:') ?></h3>
@@ -482,7 +483,6 @@ require 'Include/Header.php';
                 <!-- START GROUP MEMBERS LISTING  -->
                 <table class="table" id="membersTable">
                 </table>
-                <?php if ($_SESSION['bManageGroups']) { ?>
                 <div class="box">
                   <div class="box-header with-border">
                     <h3 class="box-title"><?php echo gettext("Group members: "); ?></h3>
@@ -505,15 +505,16 @@ require 'Include/Header.php';
                     </div>
                   </div>
                 </div>
+                </form>
                 <!-- END GROUP MEMBERS LISTING -->
                 <form action="#" method="get" class="sidebar-form">
                   <label for="addGroupMember"><?= gettext("Add Group Member: ") ?></label>
                   <select class="form-control personSearch" name="addGroupMember" style="width:100%">
                   </select>
                 </form>
-                <?php } ?>
               </div>
             </div>
+
             <script>
               window.CRM.currentGroup = <?= $iGroupID ?>;
               var dataT = 0;
